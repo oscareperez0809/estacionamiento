@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "560826800418",
+    "project_id": "estacionamiento-3e5fd",
+    "storage_bucket": "estacionamiento-3e5fd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:560826800418:android:b810fedb1ddccaf4d26d7b",
+        "android_client_info": {
+          "package_name": "com.example.estacionamiento"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCC8st_6FPLj2mYKPmhYMhHX45Me1xOkRw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
