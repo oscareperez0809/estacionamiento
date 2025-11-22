@@ -7,6 +7,10 @@ import 'package:estacionamiento/tab/marca_tab.dart';
 import 'package:estacionamiento/tab/usuario_tab.dart';
 import 'package:estacionamiento/tab/pensionados_tab.dart';
 
+//formularios
+import 'package:estacionamiento/registros/registrar_categoria.dart';
+import 'package:estacionamiento/registros/registrar_marca.dart';
+
 // Importa tu widget de tab con icono+texto
 import 'package:estacionamiento/utils/my_tab.dart';
 
@@ -54,11 +58,16 @@ class _HomePageState extends State<HomePage> {
               ),
 
               ListTile(
-                leading: Icon(Icons.category),
-                title: Text('Registrar Categoría'),
+                leading: const Icon(Icons.category),
+                title: const Text('Registrar Categoría'),
                 onTap: () {
-                  Navigator.pop(context);
-                  DefaultTabController.of(context).animateTo(1);
+                  Navigator.pop(context); // cerrar el drawer
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RegistrarCategoriaPage(),
+                    ),
+                  );
                 },
               ),
 
@@ -67,7 +76,12 @@ class _HomePageState extends State<HomePage> {
                 title: Text('Registrar Marca'),
                 onTap: () {
                   Navigator.pop(context);
-                  DefaultTabController.of(context).animateTo(2);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RegistrarMarcaPage(),
+                    ),
+                  );
                 },
               ),
 
@@ -117,9 +131,9 @@ class _HomePageState extends State<HomePage> {
               padding: EdgeInsets.only(left: 24.0),
               child: Row(
                 children: [
-                  Text('I want to ', style: TextStyle(fontSize: 24)),
+                  Text('ESTACIONAMIENTO ', style: TextStyle(fontSize: 24)),
                   Text(
-                    'Wish',
+                    'SALAZAR',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,

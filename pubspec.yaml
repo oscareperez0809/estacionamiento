@@ -28,3 +28,4 @@ flutter:
   assets:
     - lib/images/
     - lib/icons/
+    - lib/icons/marcas/
