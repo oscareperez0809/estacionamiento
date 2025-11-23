@@ -24,10 +24,7 @@ class MyApp extends StatelessWidget {
       title: 'Estacionamiento',
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
-      routes: {
-        '/': (context) => const LoginPage(),
-        '/home': (context) => const HomePage(),
-      },
+      routes: {'/': (context) => LoginPage(), '/home': (context) => HomePage()},
     );
   }
 }

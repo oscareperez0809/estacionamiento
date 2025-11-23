@@ -10,7 +10,8 @@ import 'package:estacionamiento/tab/pensionados_tab.dart';
 //formularios
 import 'package:estacionamiento/registros/registrar_categoria.dart';
 import 'package:estacionamiento/registros/registrar_marca.dart';
-
+import 'package:estacionamiento/registros/registrar_usuario.dart';
+import 'package:estacionamiento/registros/registrar_pensionado.dart';
 // Importa tu widget de tab con icono+texto
 import 'package:estacionamiento/utils/my_tab.dart';
 
@@ -90,16 +91,26 @@ class _HomePageState extends State<HomePage> {
                 title: Text('Registrar Usuario'),
                 onTap: () {
                   Navigator.pop(context);
-                  DefaultTabController.of(context).animateTo(3);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RegistrarUsuarioPage(),
+                    ),
+                  );
                 },
               ),
 
               ListTile(
-                leading: Icon(Icons.people),
+                leading: Icon(Icons.person),
                 title: Text('Registrar Pensionado'),
                 onTap: () {
                   Navigator.pop(context);
-                  DefaultTabController.of(context).animateTo(4);
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => RegistrarPensionadoPage(),
+                    ),
+                  );
                 },
               ),
             ],

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:bcrypt/bcrypt.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -9,123 +10,169 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
   final supabase = Supabase.instance.client;
 
-  Future<void> _login() async {
-    if (_formKey.currentState!.validate()) {
-      final email = _emailController.text.trim();
-      final password = _passwordController.text.trim();
+  bool loading = false;
+  String? errorMsg;
 
-      try {
-        // Buscar usuario en Supabase
-        final response = await supabase
-            .from('Usuarios')
-            .select()
-            .eq('Email', email)
-            .maybeSingle();
+  Future<void> login() async {
+    setState(() {
+      loading = true;
+      errorMsg = null;
+    });
 
-        if (response == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Usuario no encontrado')),
-          );
-          return;
-        }
+    try {
+      final email = emailController.text.trim();
+      final password = passwordController.text.trim();
 
-        // Validar contraseña
-        if (response['Contrasenia'] != password) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Contraseña incorrecta')),
-          );
-          return;
-        }
+      // BUSCAR USUARIO
+      final response = await supabase
+          .from("Usuarios")
+          .select()
+          .eq("Email", email)
+          .maybeSingle();
 
-        // Todo correcto → entrar al home
-        Navigator.pushReplacementNamed(context, '/home', arguments: response);
-      } catch (e) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (response == null) {
+        setState(() => errorMsg = "Correo no encontrado");
+        return;
       }
+
+      final storedHash = response["Contrasenia"];
+
+      if (storedHash == null || storedHash.isEmpty) {
+        setState(() => errorMsg = "El usuario no tiene contraseña registrada");
+        return;
+      }
+
+      // COMPARAR CONTRASEÑA HASHEADA
+      final isCorrect = BCrypt.checkpw(password, storedHash);
+
+      if (!isCorrect) {
+        setState(() => errorMsg = "Contraseña incorrecta");
+        return;
+      }
+
+      // LOGIN EXITOSO
+      if (!mounted) return;
+
+      Navigator.pushReplacementNamed(context, "/home");
+    } catch (e) {
+      setState(() => errorMsg = "Error: $e");
+    } finally {
+      setState(() => loading = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Center(
-          child: SingleChildScrollView(
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text(
-                    'Iniciar Sesión',
-                    style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 30),
-
-                  // EMAIL
-                  TextFormField(
-                    controller: _emailController,
-                    decoration: const InputDecoration(
-                      labelText: 'Correo electrónico',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Ingresa tu correo';
-                      }
-                      if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(value)) {
-                        return 'Correo no válido';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 20),
-
-                  // PASSWORD
-                  TextFormField(
-                    controller: _passwordController,
-                    obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Contraseña',
-                      border: OutlineInputBorder(),
-                    ),
-                    validator: (value) {
-                      if (value == null || value.isEmpty) {
-                        return 'Ingresa tu contraseña';
-                      }
-                      if (value.length < 6) {
-                        return 'Debe tener al menos 6 caracteres';
-                      }
-                      return null;
-                    },
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  // BOTÓN LOGIN
-                  ElevatedButton(
-                    onPressed: _login,
-                    style: ElevatedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 50,
-                        vertical: 15,
-                      ),
-                    ),
-                    child: const Text('Entrar'),
-                  ),
-                ],
+      backgroundColor: const Color(0xFFF5F7FA),
+      body: Center(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Icon(
+                Icons.lock_outline,
+                size: 90,
+                color: Colors.blueAccent,
               ),
-            ),
+              const SizedBox(height: 20),
+
+              const Text(
+                "Bienvenido",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold),
+              ),
+
+              const SizedBox(height: 10),
+
+              Text(
+                "Inicia sesión para continuar",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+              ),
+
+              const SizedBox(height: 35),
+
+              // EMAIL
+              TextField(
+                controller: emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: InputDecoration(
+                  labelText: "Correo electrónico",
+                  filled: true,
+                  fillColor: Colors.white,
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // PASSWORD
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: InputDecoration(
+                  labelText: "Contraseña",
+                  filled: true,
+                  fillColor: Colors.white,
+                  prefixIcon: const Icon(Icons.lock_outline),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 15),
+
+              if (errorMsg != null)
+                Text(
+                  errorMsg!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.red),
+                ),
+
+              const SizedBox(height: 25),
+
+              // BOTÓN LOGIN
+              ElevatedButton(
+                onPressed: loading ? null : login,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blueAccent,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: loading
+                    ? const CircularProgressIndicator(color: Colors.white)
+                    : const Text(
+                        "Iniciar Sesión",
+                        style: TextStyle(fontSize: 18),
+                      ),
+              ),
+
+              const SizedBox(height: 20),
+
+              GestureDetector(
+                onTap: () => Navigator.pushNamed(context, "/register"),
+                child: const Text(
+                  "¿No tienes cuenta? Regístrate",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Colors.blueAccent,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       ),
