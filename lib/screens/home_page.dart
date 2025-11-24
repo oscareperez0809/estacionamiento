@@ -36,6 +36,7 @@ class _HomePageState extends State<HomePage> {
     return DefaultTabController(
       length: myTabs.length,
       child: Scaffold(
+        resizeToAvoidBottomInset: false,
         // 🔹 MENU LATERAL (Drawer)
         drawer: Drawer(
           child: ListView(
@@ -161,6 +162,7 @@ class _HomePageState extends State<HomePage> {
             // 🔹 Contenido de las tabs
             Expanded(
               child: TabBarView(
+                physics: NeverScrollableScrollPhysics(),
                 children: [
                   CarrosTab(),
                   CategoriaTab(),
