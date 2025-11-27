@@ -12,6 +12,7 @@ import 'package:estacionamiento/registros/registrar_categoria.dart';
 import 'package:estacionamiento/registros/registrar_marca.dart';
 import 'package:estacionamiento/registros/registrar_usuario.dart';
 import 'package:estacionamiento/registros/registrar_pensionado.dart';
+import 'package:estacionamiento/registros/registrar_carro.dart';
 // Importa tu widget de tab con icono+texto
 import 'package:estacionamiento/utils/my_tab.dart';
 
@@ -51,11 +52,16 @@ class _HomePageState extends State<HomePage> {
               ),
 
               ListTile(
-                leading: Icon(Icons.directions_car),
-                title: Text('Registrar Carro'),
+                leading: const Icon(Icons.directions_car),
+                title: const Text('Registrar Carro'),
                 onTap: () {
-                  Navigator.pop(context);
-                  DefaultTabController.of(context).animateTo(0);
+                  Navigator.pop(context); // cerrar el drawer
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const RegistrarCarroPage(),
+                    ),
+                  );
                 },
               ),
 
