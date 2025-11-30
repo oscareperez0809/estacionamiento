@@ -21,7 +21,10 @@ class _CarrosTabState extends State<CarrosTab> {
   }
 
   Future<List<Map<String, dynamic>>> cargarCarros() async {
-    final data = await supabase.from('Carros_Estacionados').select('*');
+    final data = await supabase
+        .from('Carros_Estacionados')
+        .select('*')
+        .order('id', ascending: false);
     return data;
   }
 
@@ -31,12 +34,51 @@ class _CarrosTabState extends State<CarrosTab> {
       MaterialPageRoute(builder: (context) => EditarCarroPage(carro: car)),
     );
 
-    // 🔥 Recargar después de regresar
     setState(() {
       futureCarros = cargarCarros();
     });
   }
-  
+
+  // ----------------------- ELIMINAR -----------------------
+  Future<void> eliminarCarro(int id) async {
+    await supabase.from('Carros_Estacionados').delete().eq("id", id);
+    setState(() {
+      futureCarros = cargarCarros();
+    });
+  }
+
+  // ----------------------- VER ----------------------------
+  void verCarro(Map<String, dynamic> car) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text("Detalles del carro"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text("Placas: ${car['placas']}"),
+              Text("Vehículo: ${car['vehiculo']}"),
+              Text("Categoría: ${car['categoria']}"),
+              Text("Entrada: ${car['fecha_entrada']} ${car['hora_entrada']}"),
+              Text(
+                "Salida: ${car['fecha_salida'] ?? '--'} ${car['hora_salida'] ?? '--'}",
+              ),
+              Text("Tiempo: ${car['tiempo'] ?? '--'}"),
+              Text("Importe: \$${car['importe']}"),
+            ],
+          ),
+          actions: [
+            TextButton(
+              child: const Text("Cerrar"),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,40 +133,35 @@ class _CarrosTabState extends State<CarrosTab> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const SizedBox(height: 4),
-
-                      Text(
-                        "Vehículo: ${car["vehiculo"] ?? "Sin vehículo"}",
-                        style: const TextStyle(fontSize: 14),
-                      ),
-
-                      const SizedBox(height: 2),
-
-                      Text(
-                        "Categoría: ${car["categoria"] ?? "Sin categoría"}",
-                        style: const TextStyle(fontSize: 14),
-                      ),
-
-                      const SizedBox(height: 2),
-
-                      Text(
-                        "Entrada: ${car["fecha_entrada"] ?? '--'}  ${car["hora_entrada"] ?? '--'}",
-                        style: const TextStyle(fontSize: 14),
-                      ),
-
-                      const SizedBox(height: 2),
-
-                      Text(
-                        "Salida: ${car["fecha_salida"] ?? '--'}  ${car["hora_salida"] ?? '--'}",
-                        style: const TextStyle(fontSize: 14),
-                      ),
+                      Text("Vehículo: ${car["vehiculo"]}"),
+                      Text("Entrada:  ${car["hora_entrada"]}"),
+                      Text("Salida:  ${car["hora_salida"] ?? '--'}"),
+                      Text("Importe: \$${car["importe"]}"),
                     ],
                   ),
 
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit, color: Colors.blue),
-                    onPressed: () => editarCarro(car),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // VER 👁
+                      IconButton(
+                        icon: const Icon(Icons.visibility, color: Colors.green),
+                        onPressed: () => verCarro(car),
+                      ),
+
+                      // EDITAR ✏️
+                      IconButton(
+                        icon: const Icon(Icons.edit, color: Colors.blue),
+                        onPressed: () => editarCarro(car),
+                      ),
+
+                      // ELIMINAR 🗑
+                      IconButton(
+                        icon: const Icon(Icons.delete, color: Colors.red),
+                        onPressed: () => eliminarCarro(car["id"]),
+                      ),
+                    ],
                   ),
-                  
                 ),
               ),
             );
