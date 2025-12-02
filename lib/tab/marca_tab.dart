@@ -16,6 +16,8 @@ class _MarcaTabState extends State<MarcaTab> {
   List<dynamic> marcas = [];
   bool cargando = true;
 
+  String filtro = ""; // 🔍 filtro de búsqueda
+
   @override
   void initState() {
     super.initState();
@@ -81,111 +83,146 @@ class _MarcaTabState extends State<MarcaTab> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (marcas.isEmpty) {
-      return const Center(
-        child: Text(
-          "No hay marcas registradas",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-      );
-    }
+    // 🔍 APLICAR FILTRO
+    final marcasFiltradas = marcas.where((m) {
+      final nombre = (m["marcas"] ?? "").toString().toLowerCase();
+      return nombre.contains(filtro.toLowerCase());
+    }).toList();
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(15),
-      itemCount: marcas.length,
-      itemBuilder: (context, index) {
-        final marca = marcas[index];
-        final id = marca['id'];
-        final nombre = marca['marcas'];
-
-        return Card(
-          elevation: 3,
-          child: ListTile(
-            leading: Image.asset(
-              getMarcaIcon(nombre), // ← icono PNG desde tu función
-              width: 40,
-              height: 40,
-              fit: BoxFit.contain,
+    return Column(
+      children: [
+        // 🔎 BARRA DE BÚSQUEDA
+        Padding(
+          padding: const EdgeInsets.all(15),
+          child: TextField(
+            decoration: InputDecoration(
+              labelText: "Buscar marca",
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            title: Text(
-              nombre,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            trailing: PopupMenuButton(
-              onSelected: (value) async {
-                if (value == "ver") {
-                  showDialog(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: Text("Marca"),
-                      content: Row(
-                        children: [
-                          Image.asset(
-                            getMarcaIcon(nombre),
-                            width: 50,
-                            height: 50,
-                          ),
-                          const SizedBox(width: 15),
-                          Text(nombre, style: const TextStyle(fontSize: 18)),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text("Cerrar"),
-                        ),
-                      ],
-                    ),
-                  );
-                } else if (value == "editar") {
-                  final resultado = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => EditarMarcaPage(marca: marca),
-                    ),
-                  );
-
-                  if (resultado != null) cargarMarcas();
-                } else if (value == "borrar") {
-                  confirmarBorrado(id, nombre);
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: "ver",
-                  child: Row(
-                    children: [
-                      Icon(Icons.visibility, color: Colors.blue),
-                      SizedBox(width: 10),
-                      Text("Ver"),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: "editar",
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit, color: Colors.orange),
-                      SizedBox(width: 10),
-                      Text("Editar"),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: "borrar",
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, color: Colors.red),
-                      SizedBox(width: 10),
-                      Text("Borrar"),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            onChanged: (value) {
+              setState(() {
+                filtro = value.trim();
+              });
+            },
           ),
-        );
-      },
+        ),
+
+        Expanded(
+          child: marcasFiltradas.isEmpty
+              ? const Center(
+                  child: Text(
+                    "No se encontraron marcas",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(15),
+                  itemCount: marcasFiltradas.length,
+                  itemBuilder: (context, index) {
+                    final marca = marcasFiltradas[index];
+                    final id = marca['id'];
+                    final nombre = marca['marcas'];
+
+                    return Card(
+                      elevation: 3,
+                      child: ListTile(
+                        leading: Image.asset(
+                          getMarcaIcon(nombre),
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.contain,
+                        ),
+                        title: Text(
+                          nombre,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        trailing: PopupMenuButton(
+                          onSelected: (value) async {
+                            if (value == "ver") {
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: Text("Marca"),
+                                  content: Row(
+                                    children: [
+                                      Image.asset(
+                                        getMarcaIcon(nombre),
+                                        width: 50,
+                                        height: 50,
+                                      ),
+                                      const SizedBox(width: 15),
+                                      Text(
+                                        nombre,
+                                        style: const TextStyle(fontSize: 18),
+                                      ),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text("Cerrar"),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            } else if (value == "editar") {
+                              final res = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => EditarMarcaPage(marca: marca),
+                                ),
+                              );
+                              if (res != null) cargarMarcas();
+                            } else if (value == "borrar") {
+                              confirmarBorrado(id, nombre);
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: "ver",
+                              child: Row(
+                                children: [
+                                  Icon(Icons.visibility, color: Colors.blue),
+                                  SizedBox(width: 10),
+                                  Text("Ver"),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: "editar",
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit, color: Colors.orange),
+                                  SizedBox(width: 10),
+                                  Text("Editar"),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: "borrar",
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete, color: Colors.red),
+                                  SizedBox(width: 10),
+                                  Text("Borrar"),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }

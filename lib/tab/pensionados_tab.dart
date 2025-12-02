@@ -14,6 +14,8 @@ class _PensionadosTabState extends State<PensionadosTab> {
 
   late Future<List<Map<String, dynamic>>> futurePensionados;
 
+  String filtroTelefono = ""; // 🔍 ← buscador
+
   @override
   void initState() {
     super.initState();
@@ -96,7 +98,6 @@ class _PensionadosTabState extends State<PensionadosTab> {
     }
   }
 
-  // 🔵 UI PRINCIPAL
   @override
   Widget build(BuildContext context) {
     return FutureBuilder(
@@ -108,82 +109,124 @@ class _PensionadosTabState extends State<PensionadosTab> {
 
         final pens = snapshot.data!;
 
-        if (pens.isEmpty) {
-          return const Center(
-            child: Text(
-              "No hay pensionados registrados",
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          );
-        }
+        // 🔍 FILTRADO AQUÍ
+        final filtrados = pens.where((p) {
+          final tel = (p["Teléfono"] ?? "").toString();
+          return tel.contains(filtroTelefono);
+        }).toList();
 
-        return ListView.builder(
-          padding: const EdgeInsets.all(12),
-          itemCount: pens.length,
-          itemBuilder: (context, index) {
-            final p = pens[index];
-
-            final nombreCompleto = "${p['Nombre'] ?? ''} ${p['Apellido'] ?? ''}"
-                .trim();
-
-            return Card(
-              elevation: 3,
-              margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.all(16),
-
-                // 🔹 Ícono
-                leading: const Icon(
-                  Icons.person,
-                  size: 35,
-                  color: Colors.blueAccent,
-                ),
-
-                // 🔹 Título + Subtítulo
-                title: Text(
-                  nombreCompleto.isEmpty ? "Sin nombre" : nombreCompleto,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+        return Column(
+          children: [
+            // 🔵 BARRA DE BÚSQUEDA
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: TextField(
+                keyboardType: TextInputType.number,
+                decoration: InputDecoration(
+                  labelText: "Buscar por teléfono",
+                  prefixIcon: const Icon(Icons.search),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 4),
-                    Text("Teléfono: ${p['Teléfono'] ?? '--'}"),
-                    Text("Marca: ${p['Marca']}"),
-                    Text("Categoría: ${p['Categoria']}"),
-                    Text("Placas: ${p['Placas']}"),
-                    Text("Pago mensual: \$${p['Pago_Men']}"),
-                  ],
-                ),
-
-                // 🔥 ÍCONOS CENTRADOS COMO CARROSTAB
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.visibility, color: Colors.green),
-                      onPressed: () => verPensionado(p),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.blue),
-                      onPressed: () => editarPensionado(p),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => eliminarPensionado(p["id"]),
-                    ),
-                  ],
-                ),
+                onChanged: (value) {
+                  setState(() {
+                    filtroTelefono = value.trim();
+                  });
+                },
               ),
-            );
-          },
+            ),
+
+            Expanded(
+              child: filtrados.isEmpty
+                  ? const Center(
+                      child: Text(
+                        "No se encontraron coincidencias",
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.all(12),
+                      itemCount: filtrados.length,
+                      itemBuilder: (context, index) {
+                        final p = filtrados[index];
+
+                        final nombreCompleto =
+                            "${p['Nombre'] ?? ''} ${p['Apellido'] ?? ''}"
+                                .trim();
+
+                        return Card(
+                          elevation: 3,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.all(16),
+
+                            leading: const Icon(
+                              Icons.person,
+                              size: 35,
+                              color: Colors.blueAccent,
+                            ),
+
+                            title: Text(
+                              nombreCompleto.isEmpty
+                                  ? "Sin nombre"
+                                  : nombreCompleto,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 4),
+                                Text("Teléfono: ${p['Teléfono'] ?? '--'}"),
+                                Text("Marca: ${p['Marca']}"),
+                                Text("Categoría: ${p['Categoria']}"),
+                                Text("Placas: ${p['Placas']}"),
+                                Text("Pago mensual: \$${p['Pago_Men']}"),
+                              ],
+                            ),
+
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.visibility,
+                                    color: Colors.green,
+                                  ),
+                                  onPressed: () => verPensionado(p),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.edit,
+                                    color: Colors.blue,
+                                  ),
+                                  onPressed: () => editarPensionado(p),
+                                ),
+                                IconButton(
+                                  icon: const Icon(
+                                    Icons.delete,
+                                    color: Colors.red,
+                                  ),
+                                  onPressed: () => eliminarPensionado(p["id"]),
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         );
       },
     );

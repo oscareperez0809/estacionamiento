@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'login_page.dart';
-import 'screens/home_page.dart';
+import 'package:estacionamiento/login_page.dart';
+import 'package:estacionamiento/screens/home_page.dart';
+import 'package:estacionamiento/utils/session.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -23,8 +24,11 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Estacionamiento',
       debugShowCheckedModeBanner: false,
-      initialRoute: '/',
-      routes: {'/': (context) => LoginPage(), '/home': (context) => HomePage()},
+      initialRoute: SessionManager.isLogged ? '/home' : '/',
+      routes: {
+        '/': (context) => const LoginPage(),
+        '/home': (context) => const HomePage(),
+      },
     );
   }
 }

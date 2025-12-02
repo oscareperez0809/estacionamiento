@@ -12,18 +12,51 @@ class UsuarioTab extends StatefulWidget {
 class _UsuarioTabState extends State<UsuarioTab> {
   final supabase = Supabase.instance.client;
 
-  late Future<List<Map<String, dynamic>>> futureUsuarios;
+  List<Map<String, dynamic>> usuarios = [];
+  List<Map<String, dynamic>> usuariosFiltrados = [];
+
+  final TextEditingController buscadorCtrl = TextEditingController();
+
+  bool cargando = true;
 
   @override
   void initState() {
     super.initState();
-    futureUsuarios = cargarUsuarios();
+    cargarUsuarios();
   }
 
-  Future<List<Map<String, dynamic>>> cargarUsuarios() async {
-    return await supabase
-        .from('Usuarios')
-        .select('id, Email, Nombre, Apellido, Fecha_Nac');
+  Future<void> cargarUsuarios() async {
+    try {
+      final data = await supabase
+          .from('Usuarios')
+          .select('id, Email, Nombre, Apellido, Fecha_Nac')
+          .order('Nombre', ascending: true);
+
+      setState(() {
+        usuarios = List<Map<String, dynamic>>.from(data);
+        usuariosFiltrados = usuarios;
+        cargando = false;
+      });
+    } catch (e) {
+      setState(() => cargando = false);
+    }
+  }
+
+  // 🟦 FILTRAR BUSCADOR
+  void filtrarUsuarios(String query) {
+    final texto = query.toLowerCase();
+
+    setState(() {
+      usuariosFiltrados = usuarios.where((u) {
+        final nombre = (u['Nombre'] ?? '').toString().toLowerCase();
+        final apellido = (u['Apellido'] ?? '').toString().toLowerCase();
+        final email = (u['Email'] ?? '').toString().toLowerCase();
+
+        return nombre.contains(texto) ||
+            apellido.contains(texto) ||
+            email.contains(texto);
+      }).toList();
+    });
   }
 
   // 🔵 VER
@@ -58,9 +91,7 @@ class _UsuarioTabState extends State<UsuarioTab> {
       MaterialPageRoute(builder: (_) => EditarUsuarioPage(usuario: user)),
     );
 
-    setState(() {
-      futureUsuarios = cargarUsuarios();
-    });
+    await cargarUsuarios();
   }
 
   // 🔴 ELIMINAR
@@ -86,98 +117,105 @@ class _UsuarioTabState extends State<UsuarioTab> {
 
     if (confirm == true) {
       await supabase.from('Usuarios').delete().eq('id', id);
-      setState(() {
-        futureUsuarios = cargarUsuarios();
-      });
+      await cargarUsuarios();
     }
   }
 
-  // 🔵 UI
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: futureUsuarios,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    if (cargando) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
-        final usuarios = snapshot.data!;
-
-        if (usuarios.isEmpty) {
-          return const Center(
-            child: Text(
-              'No hay usuarios registrados',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(14),
-          itemCount: usuarios.length,
-          itemBuilder: (context, index) {
-            final user = usuarios[index];
-
-            final nombreCompleto = "${user['Nombre'] ?? ''}".trim();
-
-            return Card(
-              elevation: 3,
-              margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(
+    return Column(
+      children: [
+        // 🔍 BUSCADOR
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: TextField(
+            controller: buscadorCtrl,
+            decoration: InputDecoration(
+              hintText: "Buscar usuario...",
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: ListTile(
-                contentPadding: const EdgeInsets.symmetric(
-                  horizontal: 16,
-                  vertical: 12,
-                ),
+            ),
+            onChanged: filtrarUsuarios,
+          ),
+        ),
 
-                leading: const Icon(
-                  Icons.person,
-                  size: 35,
-                  color: Colors.blueAccent,
-                ),
-
-                title: Text(
-                  nombreCompleto.isEmpty ? "Sin nombre" : nombreCompleto,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+        // 🔽 LISTA
+        Expanded(
+          child: usuariosFiltrados.isEmpty
+              ? const Center(
+                  child: Text(
+                    "No se encontraron usuarios",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
-                ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(14),
+                  itemCount: usuariosFiltrados.length,
+                  itemBuilder: (context, index) {
+                    final user = usuariosFiltrados[index];
+                    final nombreCompleto =
+                        "${user['Nombre'] ?? ''} ${user['Apellido'] ?? ''}"
+                            .trim();
 
-                subtitle: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [const SizedBox(height: 4)],
-                ),
-
-                // 🔥 ICONOS A LA MISMA ALTURA
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      icon: const Icon(
-                        Icons.remove_red_eye,
-                        color: Colors.blue,
+                    return Card(
+                      elevation: 3,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                      onPressed: () => verUsuario(user),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.edit, color: Colors.green),
-                      onPressed: () => editarUsuario(user),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.delete, color: Colors.red),
-                      onPressed: () => eliminarUsuario(user['id']),
-                    ),
-                  ],
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        leading: const Icon(
+                          Icons.person,
+                          size: 35,
+                          color: Colors.blueAccent,
+                        ),
+
+                        title: Text(
+                          nombreCompleto.isEmpty
+                              ? "Sin nombre"
+                              : nombreCompleto,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.remove_red_eye,
+                                color: Colors.blue,
+                              ),
+                              onPressed: () => verUsuario(user),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.green),
+                              onPressed: () => editarUsuario(user),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => eliminarUsuario(user['id']),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
                 ),
-              ),
-            );
-          },
-        );
-      },
+        ),
+      ],
     );
   }
 }

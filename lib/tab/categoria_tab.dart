@@ -16,6 +16,8 @@ class _CategoriaTabState extends State<CategoriaTab> {
   List<dynamic> categorias = [];
   bool cargando = true;
 
+  String filtro = ""; // 🔍 buscador
+
   @override
   void initState() {
     super.initState();
@@ -82,110 +84,144 @@ class _CategoriaTabState extends State<CategoriaTab> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (categorias.isEmpty) {
-      return const Center(
-        child: Text(
-          "No hay categorías registradas",
-          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-      );
-    }
+    // 🔍 APLICAR FILTRO
+    final categoriasFiltradas = categorias.where((cat) {
+      final nombre = (cat["categoria"] ?? "").toString().toLowerCase();
+      return nombre.contains(filtro.toLowerCase());
+    }).toList();
 
-    return ListView.builder(
-      padding: const EdgeInsets.all(15),
-      itemCount: categorias.length,
-      itemBuilder: (context, index) {
-        final cat = categorias[index];
-        final id = cat['id'];
-        final nombre = cat['categoria'];
-
-        return Card(
-          elevation: 3,
-          child: ListTile(
-            leading: Icon(
-              getCategoriaIcon(nombre),
-              size: 40,
-              color: Colors.blueGrey,
+    return Column(
+      children: [
+        // 🔎 BUSCADOR
+        Padding(
+          padding: const EdgeInsets.all(15),
+          child: TextField(
+            decoration: InputDecoration(
+              labelText: "Buscar categoría",
+              prefixIcon: const Icon(Icons.search),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
             ),
-            title: Text(
-              nombre,
-              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            trailing: PopupMenuButton(
-              onSelected: (value) async {
-                if (value == 'ver') {
-                  showDialog(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: const Text("Categoría"),
-                      content: Row(
-                        children: [
-                          Icon(
-                            getCategoriaIcon(nombre),
-                            size: 45,
-                            color: Colors.blueGrey,
-                          ),
-                          const SizedBox(width: 15),
-                          Text(nombre, style: const TextStyle(fontSize: 18)),
-                        ],
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text("Cerrar"),
-                        ),
-                      ],
-                    ),
-                  );
-                } else if (value == 'editar') {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => EditarCategoriaPage(categoria: cat),
-                    ),
-                  );
-
-                  if (result != null) cargarCategorias();
-                } else if (value == 'borrar') {
-                  confirmarBorrado(id, nombre);
-                }
-              },
-              itemBuilder: (context) => [
-                const PopupMenuItem(
-                  value: 'ver',
-                  child: Row(
-                    children: [
-                      Icon(Icons.visibility, color: Colors.blue),
-                      SizedBox(width: 10),
-                      Text("Ver"),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'editar',
-                  child: Row(
-                    children: [
-                      Icon(Icons.edit, color: Colors.orange),
-                      SizedBox(width: 10),
-                      Text("Editar"),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'borrar',
-                  child: Row(
-                    children: [
-                      Icon(Icons.delete, color: Colors.red),
-                      SizedBox(width: 10),
-                      Text("Borrar"),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+            onChanged: (value) {
+              setState(() => filtro = value.trim());
+            },
           ),
-        );
-      },
+        ),
+
+        Expanded(
+          child: categoriasFiltradas.isEmpty
+              ? const Center(
+                  child: Text(
+                    "No se encontraron categorías",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(15),
+                  itemCount: categoriasFiltradas.length,
+                  itemBuilder: (context, index) {
+                    final cat = categoriasFiltradas[index];
+                    final id = cat['id'];
+                    final nombre = cat['categoria'];
+
+                    return Card(
+                      elevation: 3,
+                      child: ListTile(
+                        leading: Icon(
+                          getCategoriaIcon(nombre),
+                          size: 40,
+                          color: Colors.blueGrey,
+                        ),
+                        title: Text(
+                          nombre,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        trailing: PopupMenuButton(
+                          onSelected: (value) async {
+                            if (value == 'ver') {
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title: const Text("Categoría"),
+                                  content: Row(
+                                    children: [
+                                      Icon(
+                                        getCategoriaIcon(nombre),
+                                        size: 45,
+                                        color: Colors.blueGrey,
+                                      ),
+                                      const SizedBox(width: 15),
+                                      Text(
+                                        nombre,
+                                        style: const TextStyle(fontSize: 18),
+                                      ),
+                                    ],
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text("Cerrar"),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            } else if (value == 'editar') {
+                              final result = await Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) =>
+                                      EditarCategoriaPage(categoria: cat),
+                                ),
+                              );
+
+                              if (result != null) cargarCategorias();
+                            } else if (value == 'borrar') {
+                              confirmarBorrado(id, nombre);
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(
+                              value: 'ver',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.visibility, color: Colors.blue),
+                                  SizedBox(width: 10),
+                                  Text("Ver"),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'editar',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.edit, color: Colors.orange),
+                                  SizedBox(width: 10),
+                                  Text("Editar"),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
+                              value: 'borrar',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.delete, color: Colors.red),
+                                  SizedBox(width: 10),
+                                  Text("Borrar"),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }

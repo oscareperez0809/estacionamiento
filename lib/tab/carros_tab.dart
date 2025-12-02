@@ -14,6 +14,13 @@ class _CarrosTabState extends State<CarrosTab> {
 
   late Future<List<Map<String, dynamic>>> futureCarros;
 
+  // 🔎 Controlador del buscador
+  final TextEditingController buscadorCtrl = TextEditingController();
+
+  // Lista filtrada
+  List<Map<String, dynamic>> carrosFiltrados = [];
+  List<Map<String, dynamic>> carrosOriginal = [];
+
   @override
   void initState() {
     super.initState();
@@ -25,9 +32,29 @@ class _CarrosTabState extends State<CarrosTab> {
         .from('Carros_Estacionados')
         .select('*')
         .order('id', ascending: false);
+
+    // Guardamos ambas listas
+    carrosOriginal = List<Map<String, dynamic>>.from(data);
+    carrosFiltrados = List<Map<String, dynamic>>.from(data);
+
     return data;
   }
 
+  // 🔎 FILTRAR
+  void filtrarCarros(String texto) {
+    texto = texto.toLowerCase();
+
+    setState(() {
+      carrosFiltrados = carrosOriginal.where((car) {
+        final placas = car["placas"].toString().toLowerCase();
+        final vehiculo = car["vehiculo"].toString().toLowerCase();
+
+        return placas.contains(texto) || vehiculo.contains(texto);
+      }).toList();
+    });
+  }
+
+  // ----------------------- EDITAR -----------------------
   void editarCarro(Map<String, dynamic> car) async {
     await Navigator.push(
       context,
@@ -42,6 +69,7 @@ class _CarrosTabState extends State<CarrosTab> {
   // ----------------------- ELIMINAR -----------------------
   Future<void> eliminarCarro(int id) async {
     await supabase.from('Carros_Estacionados').delete().eq("id", id);
+
     setState(() {
       futureCarros = cargarCarros();
     });
@@ -51,32 +79,30 @@ class _CarrosTabState extends State<CarrosTab> {
   void verCarro(Map<String, dynamic> car) {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: Text("Detalles del carro"),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text("Placas: ${car['placas']}"),
-              Text("Vehículo: ${car['vehiculo']}"),
-              Text("Categoría: ${car['categoria']}"),
-              Text("Entrada: ${car['fecha_entrada']} ${car['hora_entrada']}"),
-              Text(
-                "Salida: ${car['fecha_salida'] ?? '--'} ${car['hora_salida'] ?? '--'}",
-              ),
-              Text("Tiempo: ${car['tiempo'] ?? '--'}"),
-              Text("Importe: \$${car['importe']}"),
-            ],
-          ),
-          actions: [
-            TextButton(
-              child: const Text("Cerrar"),
-              onPressed: () => Navigator.pop(context),
+      builder: (context) => AlertDialog(
+        title: Text("Detalles del carro"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Placas: ${car['placas']}"),
+            Text("Vehículo: ${car['vehiculo']}"),
+            Text("Categoría: ${car['categoria']}"),
+            Text("Entrada: ${car['fecha_entrada']} ${car['hora_entrada']}"),
+            Text(
+              "Salida: ${car['fecha_salida'] ?? '--'} ${car['hora_salida'] ?? '--'}",
             ),
+            Text("Tiempo: ${car['tiempo'] ?? '--'}"),
+            Text("Importe: \$${car['importe']}"),
           ],
-        );
-      },
+        ),
+        actions: [
+          TextButton(
+            child: const Text("Cerrar"),
+            onPressed: () => Navigator.pop(context),
+          ),
+        ],
+      ),
     );
   }
 
@@ -89,83 +115,115 @@ class _CarrosTabState extends State<CarrosTab> {
           return const Center(child: CircularProgressIndicator());
         }
 
-        final carros = snapshot.data!;
-
-        if (carros.isEmpty) {
-          return const Center(
-            child: Text(
-              "No hay carros estacionados",
-              style: TextStyle(fontSize: 16),
-            ),
-          );
-        }
-
-        return ListView.builder(
-          itemCount: carros.length,
-          itemBuilder: (context, index) {
-            final car = carros[index];
-
-            return Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              child: Card(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                elevation: 3,
-                child: ListTile(
-                  contentPadding: const EdgeInsets.all(16),
-
-                  leading: const Icon(
-                    Icons.directions_car,
-                    size: 32,
-                    color: Colors.blueAccent,
-                  ),
-
-                  title: Text(
-                    car["placas"] ?? "Sin placas",
-                    style: const TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 4),
-                      Text("Vehículo: ${car["vehiculo"]}"),
-                      Text("Entrada:  ${car["hora_entrada"]}"),
-                      Text("Salida:  ${car["hora_salida"] ?? '--'}"),
-                      Text("Importe: \$${car["importe"]}"),
-                    ],
-                  ),
-
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // VER 👁
-                      IconButton(
-                        icon: const Icon(Icons.visibility, color: Colors.green),
-                        onPressed: () => verCarro(car),
-                      ),
-
-                      // EDITAR ✏️
-                      IconButton(
-                        icon: const Icon(Icons.edit, color: Colors.blue),
-                        onPressed: () => editarCarro(car),
-                      ),
-
-                      // ELIMINAR 🗑
-                      IconButton(
-                        icon: const Icon(Icons.delete, color: Colors.red),
-                        onPressed: () => eliminarCarro(car["id"]),
-                      ),
-                    ],
+        return Column(
+          children: [
+            // 🔎 BARRA DE BÚSQUEDA
+            Padding(
+              padding: const EdgeInsets.all(12),
+              child: TextField(
+                controller: buscadorCtrl,
+                onChanged: filtrarCarros,
+                decoration: InputDecoration(
+                  hintText: "Buscar por placas o vehículo...",
+                  prefixIcon: Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.grey.shade200,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
                   ),
                 ),
               ),
-            );
-          },
+            ),
+
+            Expanded(
+              child: carrosFiltrados.isEmpty
+                  ? const Center(
+                      child: Text(
+                        "No se encontraron resultados",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: carrosFiltrados.length,
+                      itemBuilder: (context, index) {
+                        final car = carrosFiltrados[index];
+
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          child: Card(
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            elevation: 3,
+                            child: ListTile(
+                              contentPadding: const EdgeInsets.all(16),
+
+                              leading: const Icon(
+                                Icons.directions_car,
+                                size: 32,
+                                color: Colors.blueAccent,
+                              ),
+
+                              title: Text(
+                                car["placas"] ?? "Sin placas",
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 4),
+                                  Text("Vehículo: ${car["vehiculo"]}"),
+                                  Text("Entrada:  ${car["hora_entrada"]}"),
+                                  Text(
+                                    "Salida:  ${car["hora_salida"] ?? '--'}",
+                                  ),
+                                  Text("Importe: \$${car["importe"]}"),
+                                ],
+                              ),
+
+                              trailing: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.visibility,
+                                      color: Colors.green,
+                                    ),
+                                    onPressed: () => verCarro(car),
+                                  ),
+
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.edit,
+                                      color: Colors.blue,
+                                    ),
+                                    onPressed: () => editarCarro(car),
+                                  ),
+
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                    ),
+                                    onPressed: () => eliminarCarro(car["id"]),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         );
       },
     );

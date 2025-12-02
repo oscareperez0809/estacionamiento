@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:bcrypt/bcrypt.dart';
+import 'package:estacionamiento/utils/session.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -15,6 +16,7 @@ class _LoginPageState extends State<LoginPage> {
   final supabase = Supabase.instance.client;
 
   bool loading = false;
+  bool obscure = true;
   String? errorMsg;
 
   Future<void> login() async {
@@ -46,7 +48,7 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // COMPARAR CONTRASEÑA HASHEADA
+      // VALIDACIÓN BCRYPT
       final isCorrect = BCrypt.checkpw(password, storedHash);
 
       if (!isCorrect) {
@@ -54,7 +56,9 @@ class _LoginPageState extends State<LoginPage> {
         return;
       }
 
-      // LOGIN EXITOSO
+      // GUARDAR SESIÓN
+      SessionManager.login(response);
+
       if (!mounted) return;
 
       Navigator.pushReplacementNamed(context, "/home");
@@ -93,7 +97,7 @@ class _LoginPageState extends State<LoginPage> {
               Text(
                 "Inicia sesión para continuar",
                 textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey[600]),
+                style: TextStyle(fontSize: 16, color: Colors.grey),
               ),
 
               const SizedBox(height: 35),
@@ -118,12 +122,22 @@ class _LoginPageState extends State<LoginPage> {
               // PASSWORD
               TextField(
                 controller: passwordController,
-                obscureText: true,
+                obscureText: obscure,
                 decoration: InputDecoration(
                   labelText: "Contraseña",
                   filled: true,
                   fillColor: Colors.white,
                   prefixIcon: const Icon(Icons.lock_outline),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      obscure ? Icons.visibility_off : Icons.visibility,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        obscure = !obscure;
+                      });
+                    },
+                  ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
@@ -157,20 +171,6 @@ class _LoginPageState extends State<LoginPage> {
                         "Iniciar Sesión",
                         style: TextStyle(fontSize: 18),
                       ),
-              ),
-
-              const SizedBox(height: 20),
-
-              GestureDetector(
-                onTap: () => Navigator.pushNamed(context, "/register"),
-                child: const Text(
-                  "¿No tienes cuenta? Regístrate",
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    color: Colors.blueAccent,
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
               ),
             ],
           ),

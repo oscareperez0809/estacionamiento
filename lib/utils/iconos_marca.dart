@@ -80,10 +80,18 @@ String getMarcaIcon(String nombre) {
   if (marca.contains('hyundai')) {
     return 'lib/icons/marcas/hyundai.png';
   }
+  //Honda
+  if (marca.contains('honda')) {
+    return 'lib/icons/marcas/honda.png';
+  }
 
   // Kia
   if (marca.contains('kia')) {
     return 'lib/icons/marcas/kia.png';
+  }
+  // Audi
+  if (marca.contains('audi')) {
+    return 'lib/icons/marcas/audi.png';
   }
 
   // Subaru
@@ -92,7 +100,7 @@ String getMarcaIcon(String nombre) {
   }
 
   // Mitsubishi
-  if (marca.contains('mitsu')) {
+  if (marca.contains('mitsubishi')) {
     return 'lib/icons/marcas/mitsubishi.png';
   }
 
@@ -100,10 +108,50 @@ String getMarcaIcon(String nombre) {
   if (marca.contains('porsche')) {
     return 'lib/icons/marcas/porsche.png';
   }
-
+  //MG
+  if (marca.contains('mg')) {
+    return 'lib/icons/marcas/mg.png';
+  }
+  //geely
+  if (marca.contains('geely')) {
+    return 'lib/icons/marcas/geely.png';
+  }
+  //gmc
+  if (marca.contains('gmc')) {
+    return 'lib/icons/marcas/gmc.png';
+  }
+  //mustang
+  if (marca.contains('mustang')) {
+    return 'lib/icons/marcas/mustang.png';
+  }
+  //camaro
+  if (marca.contains('camaro')) {
+    return 'lib/icons/marcas/camaro.png';
+  }
+//BYD
+  if (marca.contains('byd')) {
+    return 'lib/icons/marcas/byd.png';
+  }
+  //changan
+  if (marca.contains('changan')) {
+    return 'lib/icons/marcas/changan.png';
+  }
+  //aston martin
+  if (marca.contains('aston martin')) {
+    return 'lib/icons/marcas/aston_martin.png';
+  }
+  //acura
+  if (marca.contains('acura')) {
+    return 'lib/icons/marcas/acura.png';
+  }
+  //ducati
+  if (marca.contains('ducati')) {
+    return 'lib/icons/marcas/ducati.png';
+  }
   // Default / sin coincidencia
   return 'lib/icons/marcas/default.png';
 }
+
 
 /// Widget helper por si quieres usarlo directo
 Widget marcaLogoWidget(String marca, {double size = 50}) {

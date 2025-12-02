@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 // Importa tus tabs personalizados
 import 'package:estacionamiento/tab/carros_tab.dart';
@@ -15,6 +16,8 @@ import 'package:estacionamiento/registros/registrar_pensionado.dart';
 import 'package:estacionamiento/registros/registrar_carro.dart';
 // Importa tu widget de tab con icono+texto
 import 'package:estacionamiento/utils/my_tab.dart';
+import 'package:estacionamiento/utils/session.dart';
+import 'package:estacionamiento/utils/perfil_usuario.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -134,10 +137,46 @@ class _HomePageState extends State<HomePage> {
               onPressed: () => Scaffold.of(context).openDrawer(),
             ),
           ),
-          actions: const [
+          actions: [
             Padding(
-              padding: EdgeInsets.only(right: 24.0),
-              child: Icon(Icons.person),
+              padding: const EdgeInsets.only(right: 24.0),
+              child: IconButton(
+                icon: const Icon(Icons.person),
+                onPressed: () async {
+                  final sessionUser = SessionManager.currentUser;
+
+                  if (sessionUser == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('No hay usuario logueado')),
+                    );
+                    return;
+                  }
+
+                  try {
+                    final supabase = Supabase.instance.client;
+
+                    final response = await supabase
+                        .from('Usuarios')
+                        .select('id')
+                        .eq('Email', sessionUser['Email'])
+                        .single();
+
+                    int userId = response['id'];
+
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PerfilUsuarioPage(userId: userId),
+                      ),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('No se encontró el usuario: $e')),
+                    );
+                  }
+                },
+                color: Colors.grey[800],
+              ),
             ),
           ],
         ),
