@@ -1,5 +1,5 @@
 class SessionManager {
-  static Map<String, dynamic>? currentUser; // Guarda los datos del usuario
+  static Map<String, dynamic>? currentUser;
 
   static bool get isLogged => currentUser != null;
 

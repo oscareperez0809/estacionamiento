@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'session.dart';
 
 class PerfilUsuarioPage extends StatefulWidget {
   final int userId;
@@ -12,130 +13,199 @@ class PerfilUsuarioPage extends StatefulWidget {
 
 class _PerfilUsuarioPageState extends State<PerfilUsuarioPage> {
   final supabase = Supabase.instance.client;
-
-  Map<String, dynamic>? usuario;
-  bool cargando = true;
+  Map<String, dynamic>? userData;
+  bool loading = true;
+  String? error;
 
   @override
   void initState() {
     super.initState();
-    cargarPerfil();
+    cargarUsuario();
   }
 
-  Future<void> cargarPerfil() async {
+  Future<void> cargarUsuario() async {
+    setState(() {
+      loading = true;
+      error = null;
+    });
+
     try {
-      final data = await supabase
-          .from("Usuarios")
+      final response = await supabase
+          .from('Usuarios')
           .select()
-          .eq("id", widget.userId)
+          .eq('id', widget.userId)
           .single();
 
       setState(() {
-        usuario = data;
-        cargando = false;
+        userData = Map<String, dynamic>.from(response);
+        loading = false;
       });
     } catch (e) {
-      setState(() => cargando = false);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Error al cargar perfil: $e")));
+      setState(() {
+        error = "Error cargando datos: $e";
+        loading = false;
+      });
     }
   }
 
-  Future<void> cerrarSesion() async {
-    await supabase.auth.signOut();
+  Future<void> _cerrarSesion() async {
+    try {
+      // 1) Cerrar sesión en Supabase (si estás usando auth allí)
+      await supabase.auth.signOut();
 
-    if (mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+      // 2) Limpiar sesión local (tu SessionManager)
+      SessionManager.logout();
+
+      // 3) Espera una microtarea antes de la navegación para evitar rebuilds intermedios
+      Future.microtask(() {
+        if (!mounted) return;
+        // Asume que la ruta del login en main.dart es '/'
+        Navigator.pushNamedAndRemoveUntil(context, '/', (route) => false);
+      });
+    } catch (e) {
+      // Mostrar error si algo falla
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error al cerrar sesión: $e')),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (cargando) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
-    }
-
-    if (usuario == null) {
-      return const Scaffold(
-        body: Center(child: Text("No se encontró el usuario")),
-      );
-    }
-
-    final String nombre = usuario!["Nombre"] ?? "";
-    final String apellido = usuario!["Apellido"] ?? "";
-    final String email = usuario!["Email"] ?? "";
-    final String fechaNac =
-        usuario!["Fecha_Nac"]?.toString() ?? "Sin fecha registrada";
-
     return Scaffold(
-      appBar: AppBar(title: const Text("Perfil del Usuario")),
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Card(
-          elevation: 5,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.center,
-              children: [
-                Center(
-                  child: CircleAvatar(
-                    radius: 45,
-                    backgroundColor: Colors.blue.shade100,
-                    child: const Icon(
-                      Icons.person,
-                      size: 50,
-                      color: Colors.blue,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
+      backgroundColor: const Color(0xfff5f6fa),
+      appBar: AppBar(
+        title: const Text("Perfil del Usuario"),
+        elevation: 0,
+        centerTitle: true,
+      ),
+      body: loading
+          ? const Center(child: CircularProgressIndicator())
+          : (error != null)
+              ? Center(child: Text(error!))
+              : (userData == null)
+                  ? const Center(child: Text("Usuario no encontrado"))
+                  : SingleChildScrollView(
+                      padding: const EdgeInsets.all(20.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // FOTO DE PERFIL
+                          CircleAvatar(
+                            radius: 60,
+                            backgroundColor: Colors.blueAccent.shade100,
+                            child: const Icon(
+                              Icons.person,
+                              size: 70,
+                              color: Colors.white,
+                            ),
+                          ),
 
-                Text(
-                  "$nombre $apellido",
-                  style: const TextStyle(
-                    fontSize: 26,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
+                          const SizedBox(height: 20),
 
-                const SizedBox(height: 10),
-                Text("Email: $email", style: const TextStyle(fontSize: 18)),
-                const SizedBox(height: 5),
-                Text(
-                  "Fecha de nacimiento: $fechaNac",
-                  style: const TextStyle(fontSize: 18),
-                ),
+                          // NOMBRE
+                          Text(
+                            userData!['Nombre'] ?? '',
+                            style: const TextStyle(
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
 
-                const Spacer(),
+                          const SizedBox(height: 5),
 
-                // --- BOTÓN DE CERRAR SESIÓN ---
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    onPressed: cerrarSesion,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.redAccent,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                          // EMAIL
+                          Text(
+                            userData!['Email'] ?? '',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+
+                          const SizedBox(height: 30),
+
+                          // CARD DE INFO
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(18),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.05),
+                                  blurRadius: 10,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  children: [
+                                    const Icon(Icons.badge, color: Colors.blue),
+                                    const SizedBox(width: 10),
+                                    Text(
+                                      "Información del usuario",
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.grey.shade800,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 20),
+
+                                infoItem("Nombre", userData!['Nombre'] ?? ''),
+                                const Divider(),
+                                infoItem("Correo", userData!['Email'] ?? ''),
+                                const Divider(),
+                                infoItem("Fecha nacimiento",
+                                    userData!['Fecha_Nac']?.toString() ?? '---'),
+                              ],
+                            ),
+                          ),
+
+                          const SizedBox(height: 40),
+
+                          // BOTÓN CERRAR SESIÓN
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.redAccent,
+                                padding: const EdgeInsets.symmetric(vertical: 15),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.logout),
+                              label: const Text(
+                                "Cerrar Sesión",
+                                style: TextStyle(fontSize: 18),
+                              ),
+                              onPressed: _cerrarSesion,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    child: const Text(
-                      "Cerrar sesión",
-                      style: TextStyle(fontSize: 18, color: Colors.white),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
+    );
+  }
+
+  Widget infoItem(String title, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: TextStyle(fontSize: 16, color: Colors.grey.shade700)),
+          Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }

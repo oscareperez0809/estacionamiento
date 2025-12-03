@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:estacionamiento/editar/editar_carro.dart';
+import 'package:estacionamiento/reportes/reporte_carro.dart'; // <-- IMPORTANTE
 
 class CarrosTab extends StatefulWidget {
   const CarrosTab({super.key});
@@ -33,7 +34,6 @@ class _CarrosTabState extends State<CarrosTab> {
         .select('*')
         .order('id', ascending: false);
 
-    // Guardamos ambas listas
     carrosOriginal = List<Map<String, dynamic>>.from(data);
     carrosFiltrados = List<Map<String, dynamic>>.from(data);
 
@@ -52,6 +52,11 @@ class _CarrosTabState extends State<CarrosTab> {
         return placas.contains(texto) || vehiculo.contains(texto);
       }).toList();
     });
+  }
+
+  // 🔹 GENERAR REPORTE
+  void generarReporteCarros() {
+    generarReporteCarrosPDF(context, carrosFiltrados);
   }
 
   // ----------------------- EDITAR -----------------------
@@ -117,22 +122,39 @@ class _CarrosTabState extends State<CarrosTab> {
 
         return Column(
           children: [
-            // 🔎 BARRA DE BÚSQUEDA
+            // 🔎 BARRA DE BÚSQUEDA + PDF
             Padding(
               padding: const EdgeInsets.all(12),
-              child: TextField(
-                controller: buscadorCtrl,
-                onChanged: filtrarCarros,
-                decoration: InputDecoration(
-                  hintText: "Buscar por placas o vehículo...",
-                  prefixIcon: Icon(Icons.search),
-                  filled: true,
-                  fillColor: Colors.grey.shade200,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      controller: buscadorCtrl,
+                      onChanged: filtrarCarros,
+                      decoration: InputDecoration(
+                        hintText: "Buscar por placas o vehículo...",
+                        prefixIcon: Icon(Icons.search),
+                        filled: true,
+                        fillColor: Colors.grey.shade200,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
                   ),
-                ),
+                  const SizedBox(width: 10),
+
+                  // 🔹BOTÓN DE REPORTE
+                  IconButton(
+                    icon: const Icon(
+                      Icons.picture_as_pdf,
+                      size: 30,
+                      color: Colors.red,
+                    ),
+                    onPressed: generarReporteCarros,
+                  ),
+                ],
               ),
             ),
 
@@ -161,13 +183,11 @@ class _CarrosTabState extends State<CarrosTab> {
                             elevation: 3,
                             child: ListTile(
                               contentPadding: const EdgeInsets.all(16),
-
                               leading: const Icon(
                                 Icons.directions_car,
                                 size: 32,
                                 color: Colors.blueAccent,
                               ),
-
                               title: Text(
                                 car["placas"] ?? "Sin placas",
                                 style: const TextStyle(
@@ -175,7 +195,6 @@ class _CarrosTabState extends State<CarrosTab> {
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -188,7 +207,6 @@ class _CarrosTabState extends State<CarrosTab> {
                                   Text("Importe: \$${car["importe"]}"),
                                 ],
                               ),
-
                               trailing: Row(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
@@ -199,7 +217,6 @@ class _CarrosTabState extends State<CarrosTab> {
                                     ),
                                     onPressed: () => verCarro(car),
                                   ),
-
                                   IconButton(
                                     icon: const Icon(
                                       Icons.edit,
@@ -207,7 +224,6 @@ class _CarrosTabState extends State<CarrosTab> {
                                     ),
                                     onPressed: () => editarCarro(car),
                                   ),
-
                                   IconButton(
                                     icon: const Icon(
                                       Icons.delete,

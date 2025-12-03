@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-// Importa tus tabs personalizados
+// Importa tabs
 import 'package:estacionamiento/tab/carros_tab.dart';
 import 'package:estacionamiento/tab/categoria_tab.dart';
 import 'package:estacionamiento/tab/marca_tab.dart';
 import 'package:estacionamiento/tab/usuario_tab.dart';
 import 'package:estacionamiento/tab/pensionados_tab.dart';
 
-//formularios
+// Formularios
 import 'package:estacionamiento/registros/registrar_categoria.dart';
 import 'package:estacionamiento/registros/registrar_marca.dart';
 import 'package:estacionamiento/registros/registrar_usuario.dart';
 import 'package:estacionamiento/registros/registrar_pensionado.dart';
 import 'package:estacionamiento/registros/registrar_carro.dart';
-// Importa tu widget de tab con icono+texto
+
+// Utils
 import 'package:estacionamiento/utils/my_tab.dart';
-import 'package:estacionamiento/utils/session.dart';
 import 'package:estacionamiento/utils/perfil_usuario.dart';
+import 'package:estacionamiento/utils/session.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -41,7 +42,8 @@ class _HomePageState extends State<HomePage> {
       length: myTabs.length,
       child: Scaffold(
         resizeToAvoidBottomInset: false,
-        // 🔹 MENU LATERAL (Drawer)
+
+        // ------------------ DRAWER ------------------
         drawer: Drawer(
           child: ListView(
             padding: EdgeInsets.zero,
@@ -58,11 +60,11 @@ class _HomePageState extends State<HomePage> {
                 leading: const Icon(Icons.directions_car),
                 title: const Text('Registrar Carro'),
                 onTap: () {
-                  Navigator.pop(context); // cerrar el drawer
+                  Navigator.pop(context);
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const RegistrarCarroPage(),
+                      builder: (_) => const RegistrarCarroPage(),
                     ),
                   );
                 },
@@ -72,53 +74,51 @@ class _HomePageState extends State<HomePage> {
                 leading: const Icon(Icons.category),
                 title: const Text('Registrar Categoría'),
                 onTap: () {
-                  Navigator.pop(context); // cerrar el drawer
+                  Navigator.pop(context);
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const RegistrarCategoriaPage(),
+                      builder: (_) => const RegistrarCategoriaPage(),
                     ),
                   );
                 },
               ),
 
               ListTile(
-                leading: Icon(Icons.circle),
-                title: Text('Registrar Marca'),
+                leading: const Icon(Icons.circle),
+                title: const Text('Registrar Marca'),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const RegistrarMarcaPage(),
+                      builder: (_) => const RegistrarMarcaPage(),
                     ),
                   );
                 },
               ),
 
               ListTile(
-                leading: Icon(Icons.person),
-                title: Text('Registrar Usuario'),
+                leading: const Icon(Icons.person),
+                title: const Text('Registrar Usuario'),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (context) => RegistrarUsuarioPage(),
-                    ),
+                    MaterialPageRoute(builder: (_) => RegistrarUsuarioPage()),
                   );
                 },
               ),
 
               ListTile(
-                leading: Icon(Icons.person),
-                title: Text('Registrar Pensionado'),
+                leading: const Icon(Icons.person),
+                title: const Text('Registrar Pensionado'),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => RegistrarPensionadoPage(),
+                      builder: (_) => RegistrarPensionadoPage(),
                     ),
                   );
                 },
@@ -127,7 +127,7 @@ class _HomePageState extends State<HomePage> {
           ),
         ),
 
-        // 🔹 APPBAR
+        // ------------------ APPBAR ------------------
         appBar: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
@@ -142,15 +142,18 @@ class _HomePageState extends State<HomePage> {
               padding: const EdgeInsets.only(right: 24.0),
               child: IconButton(
                 icon: const Icon(Icons.person),
+                color: Colors.grey[800],
                 onPressed: () async {
-                  final sessionUser = SessionManager.currentUser;
+                  final user = SessionManager.currentUser;
 
-                  if (sessionUser == null) {
+                  if (user == null) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('No hay usuario logueado')),
                     );
                     return;
                   }
+
+                  final email = user["Email"];
 
                   try {
                     final supabase = Supabase.instance.client;
@@ -158,10 +161,10 @@ class _HomePageState extends State<HomePage> {
                     final response = await supabase
                         .from('Usuarios')
                         .select('id')
-                        .eq('Email', sessionUser['Email'])
+                        .eq('Email', email as Object) // ← cast corregido
                         .single();
 
-                    int userId = response['id'];
+                    final userId = response['id'];
 
                     Navigator.push(
                       context,
@@ -171,17 +174,16 @@ class _HomePageState extends State<HomePage> {
                     );
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('No se encontró el usuario: $e')),
+                      SnackBar(content: Text('Error cargando usuario: $e')),
                     );
                   }
                 },
-                color: Colors.grey[800],
               ),
             ),
           ],
         ),
 
-        // 🔹 CUERPO
+        // ------------------ BODY ------------------
         body: Column(
           children: [
             const Padding(
@@ -201,13 +203,11 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
 
-            // 🔹 Tabs superiores
             TabBar(tabs: myTabs),
 
-            // 🔹 Contenido de las tabs
             Expanded(
               child: TabBarView(
-                physics: NeverScrollableScrollPhysics(),
+                physics: const NeverScrollableScrollPhysics(),
                 children: [
                   CarrosTab(),
                   CategoriaTab(),
