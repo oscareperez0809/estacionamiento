@@ -9,6 +9,14 @@ Future<void> generarReporteCarrosPDF(
   BuildContext context,
   List<Map<String, dynamic>> carros,
 ) async {
+  // 📌 Cálculo total de importes
+  double totalImporte = 0;
+  for (var car in carros) {
+    final value = double.tryParse(car["importe"].toString()) ?? 0;
+    totalImporte += value;
+  }
+
+  // 📌 Crear documento PDF
   final pdf = pw.Document();
 
   pdf.addPage(
@@ -16,6 +24,7 @@ Future<void> generarReporteCarrosPDF(
       build: (context) => pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
+          // 🏷️ Título del reporte
           pw.Text(
             "REPORTE DE SALIDA DE CARROS",
             style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
@@ -23,6 +32,7 @@ Future<void> generarReporteCarrosPDF(
 
           pw.SizedBox(height: 20),
 
+          // 📋 Tabla principal
           pw.Table(
             border: pw.TableBorder.all(),
             columnWidths: {
@@ -30,8 +40,10 @@ Future<void> generarReporteCarrosPDF(
               1: pw.FixedColumnWidth(90),
               2: pw.FixedColumnWidth(70),
               3: pw.FixedColumnWidth(70),
+              4: pw.FixedColumnWidth(70), // columna agregado Importe
             },
             children: [
+              // 🔝 Encabezados
               pw.TableRow(
                 decoration: pw.BoxDecoration(
                   color: PdfColor.fromInt(0xFFE0E0E0),
@@ -60,7 +72,7 @@ Future<void> generarReporteCarrosPDF(
                 ],
               ),
 
-              // Filas dinámicas
+              // 🔄 Filas dinámicas
               ...carros.map(
                 (car) => pw.TableRow(
                   children: [
@@ -87,6 +99,32 @@ Future<void> generarReporteCarrosPDF(
                   ],
                 ),
               ),
+
+              // 🔥 Fila final con el total
+              pw.TableRow(
+                decoration: pw.BoxDecoration(
+                  color: PdfColor.fromInt(0xFFD0FFD0),
+                ),
+                children: [
+                  pw.Padding(padding: pw.EdgeInsets.all(5), child: pw.Text("")),
+                  pw.Padding(padding: pw.EdgeInsets.all(5), child: pw.Text("")),
+                  pw.Padding(padding: pw.EdgeInsets.all(5), child: pw.Text("")),
+                  pw.Padding(
+                    padding: pw.EdgeInsets.all(5),
+                    child: pw.Text(
+                      "TOTAL:",
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: pw.EdgeInsets.all(5),
+                    child: pw.Text(
+                      "\$${totalImporte.toStringAsFixed(2)}",
+                      style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ],
@@ -94,13 +132,14 @@ Future<void> generarReporteCarrosPDF(
     ),
   );
 
-  // 🔥 DIRECTORIO QUE SÍ PERMITE ABRIR PDFs EN ANDROID
+  // 📁 Directorio temporal para guardar el PDF
   final dir = await getTemporaryDirectory();
   final file = File("${dir.path}/reporte_carros.pdf");
 
+  // 💾 Guardar archivo
   await file.writeAsBytes(await pdf.save());
 
-  // 🔥 Intentar abrir PDF
+  // 📂 Abrir archivo
   final result = await OpenFile.open(file.path);
   debugPrint("RESULTADO OPEN FILE -> $result");
 }

@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:estacionamiento/editar/editar_pensionado.dart';
 import 'package:estacionamiento/reportes/reporte_pensionado.dart';
 
+/// Clase que representa un pensionado
 class Pensionado {
   final int id;
   final String nombre;
@@ -14,6 +15,8 @@ class Pensionado {
   final String placas;
   final double pagoMensual;
   final DateTime? fechaInicio;
+
+  /// Usamos ValueNotifier para reaccionar al cambio de fecha fin
   final ValueNotifier<DateTime?> fechaFin;
 
   Pensionado({
@@ -30,6 +33,7 @@ class Pensionado {
   }) : fechaFin = ValueNotifier(fechaFin);
 }
 
+/// Vista principal de la pestaña de pensionados
 class PensionadosTab extends StatefulWidget {
   const PensionadosTab({super.key});
 
@@ -42,8 +46,10 @@ class _PensionadosTabState extends State<PensionadosTab> {
 
   List<Pensionado> pensionadosOriginal = [];
   List<Pensionado> pensionadosFiltrados = [];
+
   String filtroTelefono = "";
 
+  /// Formato deseado para mostrar fechas
   final formatoFecha = DateFormat('dd-MM-yyyy');
 
   @override
@@ -52,6 +58,18 @@ class _PensionadosTabState extends State<PensionadosTab> {
     cargarPensionados();
   }
 
+  /// Convierte cadena Fecha_Fin a DateTime sin mostrar T00:00:00
+  DateTime? parsearFecha(dynamic fecha) {
+    if (fecha == null || fecha.toString().trim().isEmpty) return null;
+
+    try {
+      return DateTime.parse(fecha.toString());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Carga los pensionados desde Supabase
   Future<void> cargarPensionados() async {
     final data = await supabase
         .from('Pensionados')
@@ -71,8 +89,10 @@ class _PensionadosTabState extends State<PensionadosTab> {
           categoria: p['Categoria'] ?? '',
           placas: p['Placas'] ?? '',
           pagoMensual: (p['Pago_Men'] ?? 0).toDouble(),
-          fechaInicio: DateTime.tryParse(p['Fecha_Inicio'] ?? ''),
-          fechaFin: DateTime.tryParse(p['Fecha_Fin'] ?? ''),
+
+          /// Convertimos la fecha sin mostrar T 00:00:00
+          fechaInicio: parsearFecha(p['Fecha_Inicio']),
+          fechaFin: parsearFecha(p['Fecha_Fin']),
         );
       }).toList();
 
@@ -80,6 +100,7 @@ class _PensionadosTabState extends State<PensionadosTab> {
     });
   }
 
+  /// Filtro por teléfono
   void filtrarPensionados(String texto) {
     texto = texto.toLowerCase();
     setState(() {
@@ -89,6 +110,7 @@ class _PensionadosTabState extends State<PensionadosTab> {
     });
   }
 
+  /// Genera reporte PDF con fechas ya formateadas
   void generarReportePensionados() {
     generarReportePensionadosPDF(
       context,
@@ -101,17 +123,21 @@ class _PensionadosTabState extends State<PensionadosTab> {
           'Categoria': p.categoria,
           'Placas': p.placas,
           'Pago_Men': p.pagoMensual,
+
+          /// Convertimos fechas al formato correcto
           'Fecha_Inicio': p.fechaInicio != null
               ? formatoFecha.format(p.fechaInicio!)
-              : '',
+              : '--',
+
           'Fecha_Fin': p.fechaFin.value != null
               ? formatoFecha.format(p.fechaFin.value!)
-              : '',
+              : '--',
         };
       }).toList(),
     );
   }
 
+  /// Muestra ventana con detalles del pensionado
   void verPensionado(Pensionado p) {
     showDialog(
       context: context,
@@ -128,11 +154,16 @@ class _PensionadosTabState extends State<PensionadosTab> {
             Text("Categoría: ${p.categoria}"),
             Text("Placas: ${p.placas}"),
             Text("Pago Mensual: \$${p.pagoMensual}"),
+
+            /// Formato correcto sin T00:00:00
             Text(
-              "Fecha Inicio: ${p.fechaInicio != null ? formatoFecha.format(p.fechaInicio!) : '--'}",
+              "Fecha Inicio: "
+              "${p.fechaInicio != null ? formatoFecha.format(p.fechaInicio!) : '--'}",
             ),
+
             Text(
-              "Fecha Fin: ${p.fechaFin.value != null ? formatoFecha.format(p.fechaFin.value!) : '--'}",
+              "Fecha Fin: "
+              "${p.fechaFin.value != null ? formatoFecha.format(p.fechaFin.value!) : '--'}",
             ),
           ],
         ),
@@ -146,17 +177,20 @@ class _PensionadosTabState extends State<PensionadosTab> {
     );
   }
 
+  /// Abre página para editar pensionado
   void editarPensionado(Pensionado p) async {
     final actualizado = await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => EditarPensionadoPage(pensionado: p)),
     );
 
+    /// Si hubo cambios, recargamos la lista
     if (actualizado == true) {
       cargarPensionados();
     }
   }
 
+  /// Elimina un registro de Supabase
   void eliminarPensionado(int id) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -183,21 +217,25 @@ class _PensionadosTabState extends State<PensionadosTab> {
     }
   }
 
+  /// Icono que indica días restantes del pago mensual
   Widget _iconoMensualidad(Pensionado p) {
     return ValueListenableBuilder<DateTime?>(
       valueListenable: p.fechaFin,
       builder: (_, fechaFin, __) {
-        if (fechaFin == null)
+        if (fechaFin == null) {
           return const Icon(Icons.circle, color: Colors.grey, size: 30);
+        }
 
         final diferencia = fechaFin.difference(DateTime.now()).inDays;
+
         Color color;
+
         if (diferencia < 0) {
-          color = Colors.red;
+          color = Colors.red; // vencido
         } else if (diferencia <= 7) {
-          color = Colors.yellow;
+          color = Colors.yellow; // por vencer
         } else {
-          color = Colors.green;
+          color = Colors.green; // al corriente
         }
 
         return Icon(Icons.circle, color: color, size: 30);
@@ -205,10 +243,12 @@ class _PensionadosTabState extends State<PensionadosTab> {
     );
   }
 
+  /// UI principal de la pestaña
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
+        /// BUSCADOR + PDF
         Padding(
           padding: const EdgeInsets.all(12),
           child: Row(
@@ -227,6 +267,8 @@ class _PensionadosTabState extends State<PensionadosTab> {
                 ),
               ),
               const SizedBox(width: 10),
+
+              /// Botón de PDF
               IconButton(
                 icon: const Icon(
                   Icons.picture_as_pdf,
@@ -238,6 +280,8 @@ class _PensionadosTabState extends State<PensionadosTab> {
             ],
           ),
         ),
+
+        /// LISTA DE PENSIONADOS
         Expanded(
           child: pensionadosFiltrados.isEmpty
               ? const Center(
@@ -251,6 +295,7 @@ class _PensionadosTabState extends State<PensionadosTab> {
                   itemCount: pensionadosFiltrados.length,
                   itemBuilder: (context, index) {
                     final p = pensionadosFiltrados[index];
+
                     final nombreCompleto = "${p.nombre} ${p.apellido}".trim();
 
                     return Card(
@@ -261,7 +306,11 @@ class _PensionadosTabState extends State<PensionadosTab> {
                       ),
                       child: ListTile(
                         contentPadding: const EdgeInsets.all(16),
+
+                        /// Icono indicador de mensualidad
                         leading: _iconoMensualidad(p),
+
+                        /// Título (nombre)
                         title: Text(
                           nombreCompleto.isEmpty
                               ? "Sin nombre"
@@ -271,20 +320,29 @@ class _PensionadosTabState extends State<PensionadosTab> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
+
+                        /// SUBTÍTULO (datos)
                         subtitle: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             const SizedBox(height: 4),
                             Text("Marca: ${p.marca}"),
                             Text("Categoría: ${p.categoria}"),
+
+                            /// Formateo correcto de fecha
                             Text(
-                              "Fecha inicio: ${p.fechaInicio != null ? formatoFecha.format(p.fechaInicio!) : '--'}",
+                              "Fecha inicio: "
+                              "${p.fechaInicio != null ? formatoFecha.format(p.fechaInicio!) : '--'}",
                             ),
+
                             Text(
-                              "Fecha fin: ${p.fechaFin.value != null ? formatoFecha.format(p.fechaFin.value!) : '--'}",
+                              "Fecha fin: "
+                              "${p.fechaFin.value != null ? formatoFecha.format(p.fechaFin.value!) : '--'}",
                             ),
                           ],
                         ),
+
+                        /// BOTONES (ver, editar, borrar)
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [

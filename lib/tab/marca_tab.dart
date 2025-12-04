@@ -13,10 +13,9 @@ class MarcaTab extends StatefulWidget {
 class _MarcaTabState extends State<MarcaTab> {
   final supabase = Supabase.instance.client;
 
-  List<dynamic> marcas = [];
-  bool cargando = true;
-
-  String filtro = ""; // 🔍 filtro de búsqueda
+  List<dynamic> marcas = []; // Lista cruda de registros traída de Supabase
+  bool cargando = true; // Flag de carga
+  String filtro = ""; // Texto del filtro (buscar marca)
 
   @override
   void initState() {
@@ -24,6 +23,7 @@ class _MarcaTabState extends State<MarcaTab> {
     cargarMarcas();
   }
 
+  /// Carga las marcas desde Supabase y actualiza el estado.
   Future<void> cargarMarcas() async {
     try {
       final data = await supabase
@@ -31,7 +31,7 @@ class _MarcaTabState extends State<MarcaTab> {
           .select()
           .order('marcas', ascending: true);
       setState(() {
-        marcas = data;
+        marcas = List<Map<String, dynamic>>.from(data as List);
         cargando = false;
       });
     } catch (e) {
@@ -42,10 +42,11 @@ class _MarcaTabState extends State<MarcaTab> {
     }
   }
 
+  /// Borra la marca por id y recarga la lista.
   Future<void> borrarMarca(int id) async {
     try {
       await supabase.from('marcas').delete().eq('id', id);
-      cargarMarcas();
+      await cargarMarcas();
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -53,6 +54,7 @@ class _MarcaTabState extends State<MarcaTab> {
     }
   }
 
+  /// Muestra diálogo de confirmación para borrar.
   void confirmarBorrado(int id, String nombre) {
     showDialog(
       context: context,
@@ -79,11 +81,12 @@ class _MarcaTabState extends State<MarcaTab> {
 
   @override
   Widget build(BuildContext context) {
+    // Mostrar loader mientras carga
     if (cargando) {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // 🔍 APLICAR FILTRO
+    // Aplicar filtro (case-insensitive)
     final marcasFiltradas = marcas.where((m) {
       final nombre = (m["marcas"] ?? "").toString().toLowerCase();
       return nombre.contains(filtro.toLowerCase());
@@ -91,7 +94,7 @@ class _MarcaTabState extends State<MarcaTab> {
 
     return Column(
       children: [
-        // 🔎 BARRA DE BÚSQUEDA
+        // Barra de búsqueda
         Padding(
           padding: const EdgeInsets.all(15),
           child: TextField(
@@ -110,6 +113,7 @@ class _MarcaTabState extends State<MarcaTab> {
           ),
         ),
 
+        // Lista de marcas filtradas
         Expanded(
           child: marcasFiltradas.isEmpty
               ? const Center(
@@ -122,19 +126,16 @@ class _MarcaTabState extends State<MarcaTab> {
                   padding: const EdgeInsets.all(15),
                   itemCount: marcasFiltradas.length,
                   itemBuilder: (context, index) {
-                    final marca = marcasFiltradas[index];
-                    final id = marca['id'];
-                    final nombre = marca['marcas'];
+                    final marca =
+                        marcasFiltradas[index] as Map<String, dynamic>;
+                    final id = marca['id'] as int;
+                    final nombre = marca['marcas']?.toString() ?? '';
 
                     return Card(
                       elevation: 3,
                       child: ListTile(
-                        leading: Image.asset(
-                          getMarcaIcon(nombre),
-                          width: 40,
-                          height: 40,
-                          fit: BoxFit.contain,
-                        ),
+                        // Usamos el helper que devuelve Image o Icon en caso de fallo
+                        leading: marcaLogoWidget(nombre, size: 40),
                         title: Text(
                           nombre,
                           style: const TextStyle(
@@ -143,20 +144,19 @@ class _MarcaTabState extends State<MarcaTab> {
                           ),
                         ),
 
-                        trailing: PopupMenuButton(
+                        // Menú de acciones (ver / editar / borrar)
+                        trailing: PopupMenuButton<String>(
                           onSelected: (value) async {
                             if (value == "ver") {
+                              // Mostrar diálogo con la marca
                               showDialog(
                                 context: context,
                                 builder: (_) => AlertDialog(
-                                  title: Text("Marca"),
+                                  title: const Text("Marca"),
                                   content: Row(
                                     children: [
-                                      Image.asset(
-                                        getMarcaIcon(nombre),
-                                        width: 50,
-                                        height: 50,
-                                      ),
+                                      // mostramos logo o icono
+                                      marcaLogoWidget(nombre, size: 50),
                                       const SizedBox(width: 15),
                                       Text(
                                         nombre,
@@ -173,13 +173,14 @@ class _MarcaTabState extends State<MarcaTab> {
                                 ),
                               );
                             } else if (value == "editar") {
+                              // Navegar a la página de edición y recargar si regresan cambios
                               final res = await Navigator.push(
                                 context,
                                 MaterialPageRoute(
                                   builder: (_) => EditarMarcaPage(marca: marca),
                                 ),
                               );
-                              if (res != null) cargarMarcas();
+                              if (res != null) await cargarMarcas();
                             } else if (value == "borrar") {
                               confirmarBorrado(id, nombre);
                             }
