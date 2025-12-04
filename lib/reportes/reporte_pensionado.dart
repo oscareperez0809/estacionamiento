@@ -29,7 +29,6 @@ Future<void> generarReportePensionadosPDF(
             border: pw.TableBorder.all(),
             defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
             columnWidths: {
-              0: pw.FixedColumnWidth(40), // ID
               1: pw.FixedColumnWidth(100), // Nombre
               2: pw.FixedColumnWidth(100), // Apellido
               3: pw.FixedColumnWidth(80), // Teléfono
@@ -47,10 +46,6 @@ Future<void> generarReportePensionadosPDF(
                   color: PdfColor.fromInt(0xFFE0E0E0),
                 ),
                 children: [
-                  pw.Padding(
-                    padding: pw.EdgeInsets.all(5),
-                    child: pw.Center(child: pw.Text("ID")),
-                  ),
                   pw.Padding(
                     padding: pw.EdgeInsets.all(5),
                     child: pw.Center(child: pw.Text("Nombre")),
@@ -94,12 +89,6 @@ Future<void> generarReportePensionadosPDF(
               ...pensionados.map(
                 (p) => pw.TableRow(
                   children: [
-                    pw.Padding(
-                      padding: pw.EdgeInsets.all(5),
-                      child: pw.Center(
-                        child: pw.Text(p["id"]?.toString() ?? ""),
-                      ),
-                    ),
                     pw.Padding(
                       padding: pw.EdgeInsets.all(5),
                       child: pw.Center(child: pw.Text(p["Nombre"] ?? "")),
