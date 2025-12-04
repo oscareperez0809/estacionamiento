@@ -21,12 +21,23 @@ class _EditarMarcaPageState extends State<EditarMarcaPage> {
     marcaCtrl = TextEditingController(text: widget.marca["marcas"]);
   }
 
+  // 🔤 Filtro de ortografía / formato → Capitaliza la marca
+  String formatMarca(String texto) {
+    texto = texto.trim();
+    if (texto.isEmpty) return texto;
+    return texto[0].toUpperCase() + texto.substring(1).toLowerCase();
+  }
+
   Future<void> guardar() async {
     final id = widget.marca["id"];
 
-    await supabase.from("marcas").update({
-      "marcas": marcaCtrl.text,
-    }).eq("id", id);
+    // Aplica corrección de escritura antes de guardar
+    final marcaFormateada = formatMarca(marcaCtrl.text);
+
+    await supabase
+        .from("marcas")
+        .update({"marcas": marcaFormateada})
+        .eq("id", id);
 
     if (mounted) Navigator.pop(context);
   }
@@ -50,7 +61,7 @@ class _EditarMarcaPageState extends State<EditarMarcaPage> {
             ElevatedButton(
               onPressed: guardar,
               child: const Text("Guardar Cambios"),
-            )
+            ),
           ],
         ),
       ),
