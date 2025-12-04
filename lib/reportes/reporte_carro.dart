@@ -17,7 +17,7 @@ Future<void> generarReporteCarrosPDF(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.Text(
-            "REPORTE DE CARROS ESTACIONADOS",
+            "REPORTE DE SALIDA DE CARROS",
             style: pw.TextStyle(fontSize: 22, fontWeight: pw.FontWeight.bold),
           ),
 
@@ -39,15 +39,19 @@ Future<void> generarReporteCarrosPDF(
                 children: [
                   pw.Padding(
                     padding: pw.EdgeInsets.all(5),
+                    child: pw.Text("Entrada"),
+                  ),
+                  pw.Padding(
+                    padding: pw.EdgeInsets.all(5),
+                    child: pw.Text("Vehiculo"),
+                  ),
+                  pw.Padding(
+                    padding: pw.EdgeInsets.all(5),
                     child: pw.Text("Placas"),
                   ),
                   pw.Padding(
                     padding: pw.EdgeInsets.all(5),
-                    child: pw.Text("Vehículo"),
-                  ),
-                  pw.Padding(
-                    padding: pw.EdgeInsets.all(5),
-                    child: pw.Text("Entrada"),
+                    child: pw.Text("Salida"),
                   ),
                   pw.Padding(
                     padding: pw.EdgeInsets.all(5),
@@ -62,7 +66,7 @@ Future<void> generarReporteCarrosPDF(
                   children: [
                     pw.Padding(
                       padding: pw.EdgeInsets.all(5),
-                      child: pw.Text(car["placas"] ?? ""),
+                      child: pw.Text(car["hora_entrada"] ?? ""),
                     ),
                     pw.Padding(
                       padding: pw.EdgeInsets.all(5),
@@ -70,7 +74,11 @@ Future<void> generarReporteCarrosPDF(
                     ),
                     pw.Padding(
                       padding: pw.EdgeInsets.all(5),
-                      child: pw.Text(car["hora_entrada"] ?? ""),
+                      child: pw.Text(car["placas"] ?? ""),
+                    ),
+                    pw.Padding(
+                      padding: pw.EdgeInsets.all(5),
+                      child: pw.Text(car["hora_salida"] ?? ""),
                     ),
                     pw.Padding(
                       padding: pw.EdgeInsets.all(5),
@@ -94,5 +102,5 @@ Future<void> generarReporteCarrosPDF(
 
   // 🔥 Intentar abrir PDF
   final result = await OpenFile.open(file.path);
-  print("RESULTADO OPEN FILE -> $result");
+  debugPrint("RESULTADO OPEN FILE -> $result");
 }

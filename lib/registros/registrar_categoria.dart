@@ -12,8 +12,15 @@ class _RegistrarCategoriaPageState extends State<RegistrarCategoriaPage> {
   final TextEditingController _nombreCtrl = TextEditingController();
   final supabase = Supabase.instance.client;
 
+  // Función para capitalizar la primera letra
+  String corregirOrtografia(String texto) {
+    if (texto.isEmpty) return '';
+    return texto[0].toUpperCase() + texto.substring(1).toLowerCase();
+  }
+
   Future<void> registrarCategoria() async {
-    final nombre = _nombreCtrl.text.trim(); // ← variable correcta
+    String nombre = _nombreCtrl.text.trim();
+    nombre = corregirOrtografia(nombre); // aplicar corrección ortográfica
 
     if (nombre.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -23,9 +30,25 @@ class _RegistrarCategoriaPageState extends State<RegistrarCategoriaPage> {
     }
 
     try {
-      await supabase.from('categorias').insert({
-        'categoria': nombre, // ← aquí usas 'nombre', no 'categoria'
-      });
+      // 🔍 Verificar si ya existe la categoría (case insensitive)
+      final existe = await supabase
+          .from('categorias')
+          .select('*')
+          .ilike('categoria', nombre);
+
+      if (existe.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "La categoría '$nombre' ya está registrada. Ingresa otra distinta.",
+            ),
+          ),
+        );
+        return; // salir sin registrar
+      }
+
+      // Registrar categoría
+      await supabase.from('categorias').insert({'categoria': nombre});
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Categoría registrada correctamente ✔")),

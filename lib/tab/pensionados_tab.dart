@@ -1,6 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:estacionamiento/editar/editar_pensionado.dart';
+import 'package:estacionamiento/reportes/reporte_pensionado.dart';
+
+class Pensionado {
+  final int id;
+  final String nombre;
+  final String apellido;
+  final String telefono;
+  final String marca;
+  final String categoria;
+  final String placas;
+  final double pagoMensual;
+  final DateTime? fechaInicio;
+  final ValueNotifier<DateTime?> fechaFin;
+
+  Pensionado({
+    required this.id,
+    required this.nombre,
+    required this.apellido,
+    required this.telefono,
+    required this.marca,
+    required this.categoria,
+    required this.placas,
+    required this.pagoMensual,
+    this.fechaInicio,
+    DateTime? fechaFin,
+  }) : fechaFin = ValueNotifier(fechaFin);
+}
 
 class PensionadosTab extends StatefulWidget {
   const PensionadosTab({super.key});
@@ -12,38 +40,100 @@ class PensionadosTab extends StatefulWidget {
 class _PensionadosTabState extends State<PensionadosTab> {
   final supabase = Supabase.instance.client;
 
-  late Future<List<Map<String, dynamic>>> futurePensionados;
+  List<Pensionado> pensionadosOriginal = [];
+  List<Pensionado> pensionadosFiltrados = [];
+  String filtroTelefono = "";
 
-  String filtroTelefono = ""; // 🔍 ← buscador
+  final formatoFecha = DateFormat('dd-MM-yyyy');
 
   @override
   void initState() {
     super.initState();
-    futurePensionados = cargarPensionados();
+    cargarPensionados();
   }
 
-  Future<List<Map<String, dynamic>>> cargarPensionados() async {
-    return await supabase.from('Pensionados').select('*');
+  Future<void> cargarPensionados() async {
+    final data = await supabase
+        .from('Pensionados')
+        .select('*')
+        .order('id', ascending: false);
+
+    final lista = List<Map<String, dynamic>>.from(data as List);
+
+    setState(() {
+      pensionadosOriginal = lista.map<Pensionado>((p) {
+        return Pensionado(
+          id: p['id'],
+          nombre: p['Nombre'] ?? '',
+          apellido: p['Apellido'] ?? '',
+          telefono: p['Teléfono']?.toString() ?? '',
+          marca: p['Marca'] ?? '',
+          categoria: p['Categoria'] ?? '',
+          placas: p['Placas'] ?? '',
+          pagoMensual: (p['Pago_Men'] ?? 0).toDouble(),
+          fechaInicio: DateTime.tryParse(p['Fecha_Inicio'] ?? ''),
+          fechaFin: DateTime.tryParse(p['Fecha_Fin'] ?? ''),
+        );
+      }).toList();
+
+      pensionadosFiltrados = List<Pensionado>.from(pensionadosOriginal);
+    });
   }
 
-  // 🔵 VER
-  void verPensionado(Map<String, dynamic> p) {
+  void filtrarPensionados(String texto) {
+    texto = texto.toLowerCase();
+    setState(() {
+      pensionadosFiltrados = pensionadosOriginal.where((p) {
+        return p.telefono.toLowerCase().contains(texto);
+      }).toList();
+    });
+  }
+
+  void generarReportePensionados() {
+    generarReportePensionadosPDF(
+      context,
+      pensionadosFiltrados.map((p) {
+        return {
+          'Nombre': p.nombre,
+          'Apellido': p.apellido,
+          'Teléfono': p.telefono,
+          'Marca': p.marca,
+          'Categoria': p.categoria,
+          'Placas': p.placas,
+          'Pago_Men': p.pagoMensual,
+          'Fecha_Inicio': p.fechaInicio != null
+              ? formatoFecha.format(p.fechaInicio!)
+              : '',
+          'Fecha_Fin': p.fechaFin.value != null
+              ? formatoFecha.format(p.fechaFin.value!)
+              : '',
+        };
+      }).toList(),
+    );
+  }
+
+  void verPensionado(Pensionado p) {
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text("Detalles del pensionado"),
+        title: Text("Detalles de ${p.nombre} ${p.apellido}"),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Nombre: ${p['Nombre']} ${p['Apellido']}"),
-            Text("Teléfono: ${p['Teléfono'] ?? '--'}"),
-            Text("Marca: ${p['Marca']}"),
-            Text("Categoría: ${p['Categoria']}"),
-            Text("Placas: ${p['Placas']}"),
-            Text("Pago mensual: \$${p['Pago_Men']}"),
-            Text("Inicio: ${p['Fecha_Inicio'] ?? '--'}"),
-            Text("Fin: ${p['Fecha_Fin'] ?? '--'}"),
+            Text("Nombre: ${p.nombre}"),
+            Text("Apellido: ${p.apellido}"),
+            Text("Teléfono: ${p.telefono}"),
+            Text("Marca: ${p.marca}"),
+            Text("Categoría: ${p.categoria}"),
+            Text("Placas: ${p.placas}"),
+            Text("Pago Mensual: \$${p.pagoMensual}"),
+            Text(
+              "Fecha Inicio: ${p.fechaInicio != null ? formatoFecha.format(p.fechaInicio!) : '--'}",
+            ),
+            Text(
+              "Fecha Fin: ${p.fechaFin.value != null ? formatoFecha.format(p.fechaFin.value!) : '--'}",
+            ),
           ],
         ),
         actions: [
@@ -56,19 +146,17 @@ class _PensionadosTabState extends State<PensionadosTab> {
     );
   }
 
-  // 🟢 EDITAR
-  void editarPensionado(Map<String, dynamic> p) async {
-    await Navigator.push(
+  void editarPensionado(Pensionado p) async {
+    final actualizado = await Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => EditarPensionadoPage(pensionado: p)),
     );
 
-    setState(() {
-      futurePensionados = cargarPensionados();
-    });
+    if (actualizado == true) {
+      cargarPensionados();
+    }
   }
 
-  // 🔴 ELIMINAR
   void eliminarPensionado(int id) async {
     final confirm = await showDialog<bool>(
       context: context,
@@ -91,144 +179,138 @@ class _PensionadosTabState extends State<PensionadosTab> {
 
     if (confirm == true) {
       await supabase.from('Pensionados').delete().eq("id", id);
-
-      setState(() {
-        futurePensionados = cargarPensionados();
-      });
+      cargarPensionados();
     }
+  }
+
+  Widget _iconoMensualidad(Pensionado p) {
+    return ValueListenableBuilder<DateTime?>(
+      valueListenable: p.fechaFin,
+      builder: (_, fechaFin, __) {
+        if (fechaFin == null)
+          return const Icon(Icons.circle, color: Colors.grey, size: 30);
+
+        final diferencia = fechaFin.difference(DateTime.now()).inDays;
+        Color color;
+        if (diferencia < 0) {
+          color = Colors.red;
+        } else if (diferencia <= 7) {
+          color = Colors.yellow;
+        } else {
+          color = Colors.green;
+        }
+
+        return Icon(Icons.circle, color: color, size: 30);
+      },
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: futurePensionados,
-      builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final pens = snapshot.data!;
-
-        // 🔍 FILTRADO AQUÍ
-        final filtrados = pens.where((p) {
-          final tel = (p["Teléfono"] ?? "").toString();
-          return tel.contains(filtroTelefono);
-        }).toList();
-
-        return Column(
-          children: [
-            // 🔵 BARRA DE BÚSQUEDA
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: TextField(
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: "Buscar por teléfono",
-                  prefixIcon: const Icon(Icons.search),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(12),
+          child: Row(
+            children: [
+              Expanded(
+                child: TextField(
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: "Buscar por teléfono",
+                    prefixIcon: const Icon(Icons.search),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
+                  onChanged: filtrarPensionados,
                 ),
-                onChanged: (value) {
-                  setState(() {
-                    filtroTelefono = value.trim();
-                  });
-                },
               ),
-            ),
+              const SizedBox(width: 10),
+              IconButton(
+                icon: const Icon(
+                  Icons.picture_as_pdf,
+                  size: 30,
+                  color: Colors.red,
+                ),
+                onPressed: generarReportePensionados,
+              ),
+            ],
+          ),
+        ),
+        Expanded(
+          child: pensionadosFiltrados.isEmpty
+              ? const Center(
+                  child: Text(
+                    "No se encontraron coincidencias",
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                )
+              : ListView.builder(
+                  padding: const EdgeInsets.all(12),
+                  itemCount: pensionadosFiltrados.length,
+                  itemBuilder: (context, index) {
+                    final p = pensionadosFiltrados[index];
+                    final nombreCompleto = "${p.nombre} ${p.apellido}".trim();
 
-            Expanded(
-              child: filtrados.isEmpty
-                  ? const Center(
-                      child: Text(
-                        "No se encontraron coincidencias",
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
+                    return Card(
+                      elevation: 3,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(16),
+                        leading: _iconoMensualidad(p),
+                        title: Text(
+                          nombreCompleto.isEmpty
+                              ? "Sin nombre"
+                              : nombreCompleto,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: 4),
+                            Text("Marca: ${p.marca}"),
+                            Text("Categoría: ${p.categoria}"),
+                            Text(
+                              "Fecha inicio: ${p.fechaInicio != null ? formatoFecha.format(p.fechaInicio!) : '--'}",
+                            ),
+                            Text(
+                              "Fecha fin: ${p.fechaFin.value != null ? formatoFecha.format(p.fechaFin.value!) : '--'}",
+                            ),
+                          ],
+                        ),
+                        trailing: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: const Icon(
+                                Icons.visibility,
+                                color: Colors.green,
+                              ),
+                              onPressed: () => verPensionado(p),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.blue),
+                              onPressed: () => editarPensionado(p),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () => eliminarPensionado(p.id),
+                            ),
+                          ],
                         ),
                       ),
-                    )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: filtrados.length,
-                      itemBuilder: (context, index) {
-                        final p = filtrados[index];
-
-                        final nombreCompleto =
-                            "${p['Nombre'] ?? ''} ${p['Apellido'] ?? ''}"
-                                .trim();
-
-                        return Card(
-                          elevation: 3,
-                          margin: const EdgeInsets.only(bottom: 12),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.all(16),
-
-                            leading: const Icon(
-                              Icons.person,
-                              size: 35,
-                              color: Colors.blueAccent,
-                            ),
-
-                            title: Text(
-                              nombreCompleto.isEmpty
-                                  ? "Sin nombre"
-                                  : nombreCompleto,
-                              style: const TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-
-                            subtitle: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const SizedBox(height: 4),
-                                Text("Teléfono: ${p['Teléfono'] ?? '--'}"),
-                                Text("Marca: ${p['Marca']}"),
-                                Text("Categoría: ${p['Categoria']}"),
-                                Text("Placas: ${p['Placas']}"),
-                                Text("Pago mensual: \$${p['Pago_Men']}"),
-                              ],
-                            ),
-
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.visibility,
-                                    color: Colors.green,
-                                  ),
-                                  onPressed: () => verPensionado(p),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.edit,
-                                    color: Colors.blue,
-                                  ),
-                                  onPressed: () => editarPensionado(p),
-                                ),
-                                IconButton(
-                                  icon: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                  ),
-                                  onPressed: () => eliminarPensionado(p["id"]),
-                                ),
-                              ],
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-            ),
-          ],
-        );
-      },
+                    );
+                  },
+                ),
+        ),
+      ],
     );
   }
 }

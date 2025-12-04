@@ -81,18 +81,37 @@ class _RegistrarCarroPageState extends State<RegistrarCarroPage> {
 
   Future<void> guardarCarro() async {
     try {
+      final placaIngresada = placasCtrl.text.trim().toUpperCase();
+
+      // 🔍 Verificar si ya existe la placa
+      final existe = await Supabase.instance.client
+          .from("Carros_Estacionados")
+          .select("*")
+          .ilike("placas", placaIngresada);
+
+      if (existe.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              "La placa '$placaIngresada' ya está registrada. Ingresa otra distinta.",
+            ),
+          ),
+        );
+        return; // salir sin guardar
+      }
+
       final categoriaTexto = listaCategorias.firstWhere(
         (c) => c['id'] == categoriaSeleccionada,
       )['categoria'];
 
       final vehiculoTexto = listaVehiculos.firstWhere(
         (v) => v['id'] == vehiculoSeleccionado,
-      )['marcas']; // sigue llamándose "marcas" en la tabla, pero se muestra como Vehículo
+      )['marcas'];
 
       await Supabase.instance.client.from("Carros_Estacionados").insert({
-        "placas": placasCtrl.text,
+        "placas": placaIngresada,
         "categoria": categoriaTexto,
-        "vehiculo": vehiculoTexto, // cambiamos la clave para que tenga sentido
+        "vehiculo": vehiculoTexto,
         "fecha_entrada": fechaEntradaCtrl.text,
         "hora_entrada": horaEntradaCtrl.text,
       });
@@ -100,6 +119,15 @@ class _RegistrarCarroPageState extends State<RegistrarCarroPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Carro registrado correctamente")),
       );
+
+      // Limpiar campos después de registrar
+      placasCtrl.clear();
+      fechaEntradaCtrl.clear();
+      horaEntradaCtrl.clear();
+      setState(() {
+        categoriaSeleccionada = null;
+        vehiculoSeleccionado = null;
+      });
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -115,7 +143,7 @@ class _RegistrarCarroPageState extends State<RegistrarCarroPage> {
         backgroundColor: Colors.blueAccent,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(25),
+        padding: const EdgeInsets.all(10),
         child: Form(
           key: _formKey,
           child: Column(
@@ -126,7 +154,7 @@ class _RegistrarCarroPageState extends State<RegistrarCarroPage> {
               Row(
                 children: [
                   Expanded(child: _dropdownCategoria()),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 14),
                   Expanded(child: _dropdownVehiculo()),
                 ],
               ),

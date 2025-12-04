@@ -190,11 +190,11 @@ class _HomePageState extends State<HomePage> {
               padding: EdgeInsets.only(left: 24.0),
               child: Row(
                 children: [
-                  Text('ESTACIONAMIENTO ', style: TextStyle(fontSize: 24)),
+                  Text('ESTACIONAMIENTO ', style: TextStyle(fontSize: 20)),
                   Text(
                     'SALAZAR',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                       decoration: TextDecoration.underline,
                     ),

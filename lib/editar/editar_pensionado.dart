@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:estacionamiento/tab/pensionados_tab.dart'; // Importar Pensionado
 
 class EditarPensionadoPage extends StatefulWidget {
-  final Map<String, dynamic> pensionado;
+  final Pensionado pensionado;
 
   const EditarPensionadoPage({super.key, required this.pensionado});
 
@@ -14,22 +15,21 @@ class EditarPensionadoPage extends StatefulWidget {
 class _EditarPensionadoPageState extends State<EditarPensionadoPage> {
   final supabase = Supabase.instance.client;
 
-  // Controladores de texto
   late TextEditingController apellidoCtrl;
   late TextEditingController nombreCtrl;
   late TextEditingController telefonoCtrl;
   late TextEditingController placasCtrl;
   late TextEditingController pagoCtrl;
 
-  // Dropdowns
+  late TextEditingController fechaInicioCtrl;
+  late TextEditingController fechaFinCtrl;
+
   String? marcaSeleccionada;
   String? categoriaSeleccionada;
 
-  // Listas desde Supabase
   List<String> marcas = [];
   List<String> categorias = [];
 
-  // Fechas
   DateTime? fechaInicio;
   DateTime? fechaFin;
   final formatoFecha = DateFormat("yyyy-MM-dd");
@@ -38,27 +38,26 @@ class _EditarPensionadoPageState extends State<EditarPensionadoPage> {
   void initState() {
     super.initState();
 
-    // Inicializar campos existentes
-    apellidoCtrl = TextEditingController(text: widget.pensionado["Apellido"]);
-    nombreCtrl = TextEditingController(text: widget.pensionado["Nombre"]);
-    telefonoCtrl = TextEditingController(
-      text: widget.pensionado["Teléfono"]?.toString(),
-    );
-    placasCtrl = TextEditingController(text: widget.pensionado["Placas"]);
+    apellidoCtrl = TextEditingController(text: widget.pensionado.apellido);
+    nombreCtrl = TextEditingController(text: widget.pensionado.nombre);
+    telefonoCtrl = TextEditingController(text: widget.pensionado.telefono);
+    placasCtrl = TextEditingController(text: widget.pensionado.placas);
     pagoCtrl = TextEditingController(
-      text: widget.pensionado["Pago_Men"]?.toString(),
+      text: widget.pensionado.pagoMensual.toString(),
     );
 
-    marcaSeleccionada = widget.pensionado["Marca"];
-    categoriaSeleccionada = widget.pensionado["Categoria"];
+    marcaSeleccionada = widget.pensionado.marca;
+    categoriaSeleccionada = widget.pensionado.categoria;
 
-    fechaInicio = widget.pensionado["Fecha_Inicio"] != null
-        ? DateTime.parse(widget.pensionado["Fecha_Inicio"])
-        : null;
+    fechaInicio = widget.pensionado.fechaInicio;
+    fechaFin = widget.pensionado.fechaFin.value;
 
-    fechaFin = widget.pensionado["Fecha_Fin"] != null
-        ? DateTime.parse(widget.pensionado["Fecha_Fin"])
-        : null;
+    fechaInicioCtrl = TextEditingController(
+      text: fechaInicio != null ? formatoFecha.format(fechaInicio!) : '',
+    );
+    fechaFinCtrl = TextEditingController(
+      text: fechaFin != null ? formatoFecha.format(fechaFin!) : '',
+    );
 
     cargarDatos();
   }
@@ -84,26 +83,38 @@ class _EditarPensionadoPageState extends State<EditarPensionadoPage> {
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
     );
+
     if (nuevaFecha != null) {
-      setState(() => fechaInicio = nuevaFecha);
+      setState(() {
+        fechaInicio = nuevaFecha;
+        fechaInicioCtrl.text = formatoFecha.format(fechaInicio!);
+
+        // Ajustar fechaFin automáticamente si es menor
+        if (fechaFin == null || fechaFin!.isBefore(fechaInicio!)) {
+          fechaFin = fechaInicio!.add(const Duration(days: 30));
+          fechaFinCtrl.text = formatoFecha.format(fechaFin!);
+        }
+      });
     }
   }
 
   Future<void> seleccionarFechaFin() async {
     final nuevaFecha = await showDatePicker(
       context: context,
-      initialDate: fechaFin ?? DateTime.now(),
-      firstDate: DateTime(2000),
+      initialDate: fechaFin ?? (fechaInicio ?? DateTime.now()),
+      firstDate: fechaInicio ?? DateTime(2000),
       lastDate: DateTime(2100),
     );
+
     if (nuevaFecha != null) {
-      setState(() => fechaFin = nuevaFecha);
+      setState(() {
+        fechaFin = nuevaFecha;
+        fechaFinCtrl.text = formatoFecha.format(fechaFin!);
+      });
     }
   }
 
   Future<void> guardar() async {
-    final id = widget.pensionado["id"];
-
     await supabase
         .from("Pensionados")
         .update({
@@ -119,12 +130,10 @@ class _EditarPensionadoPageState extends State<EditarPensionadoPage> {
               : null,
           "Fecha_Fin": fechaFin != null ? formatoFecha.format(fechaFin!) : null,
         })
-        .eq("id", id);
+        .eq("id", widget.pensionado.id);
 
-    if (mounted) Navigator.pop(context);
+    if (mounted) Navigator.pop(context, true); // true para refrescar la lista
   }
-
-  // ------------------ WIDGET REUTILIZABLES ----------------------------------
 
   Widget campoTexto(
     String label,
@@ -155,7 +164,7 @@ class _EditarPensionadoPageState extends State<EditarPensionadoPage> {
       child: DropdownButtonFormField<String>(
         value: valor,
         items: items
-            .map((e) => DropdownMenuItem<String>(value: e, child: Text(e)))
+            .map((e) => DropdownMenuItem(value: e, child: Text(e)))
             .toList(),
         onChanged: onChanged,
         decoration: InputDecoration(
@@ -166,27 +175,27 @@ class _EditarPensionadoPageState extends State<EditarPensionadoPage> {
     );
   }
 
-  Widget fechaCampo(String label, DateTime? fecha, VoidCallback onTap) {
+  Widget fechaCampo(
+    String label,
+    TextEditingController controller,
+    VoidCallback onTap,
+  ) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: GestureDetector(
         onTap: onTap,
         child: AbsorbPointer(
           child: TextField(
+            controller: controller,
             decoration: InputDecoration(
               labelText: label,
               border: OutlineInputBorder(),
-            ),
-            controller: TextEditingController(
-              text: fecha != null ? formatoFecha.format(fecha) : "",
             ),
           ),
         ),
       ),
     );
   }
-
-  // ------------------------ UI PRINCIPAL -------------------------------------
 
   @override
   Widget build(BuildContext context) {
@@ -201,18 +210,20 @@ class _EditarPensionadoPageState extends State<EditarPensionadoPage> {
             campoTexto("Teléfono", telefonoCtrl, tipo: TextInputType.number),
             campoTexto("Placas", placasCtrl),
             campoTexto("Pago Mensual", pagoCtrl, tipo: TextInputType.number),
-
-            dropdownCampo("Marca", marcaSeleccionada, marcas, (v) {
-              setState(() => marcaSeleccionada = v);
-            }),
-
-            dropdownCampo("Categoría", categoriaSeleccionada, categorias, (v) {
-              setState(() => categoriaSeleccionada = v);
-            }),
-
-            fechaCampo("Fecha Inicio", fechaInicio, seleccionarFechaInicio),
-            fechaCampo("Fecha Fin", fechaFin, seleccionarFechaFin),
-
+            dropdownCampo(
+              "Marca",
+              marcaSeleccionada,
+              marcas,
+              (v) => setState(() => marcaSeleccionada = v),
+            ),
+            dropdownCampo(
+              "Categoría",
+              categoriaSeleccionada,
+              categorias,
+              (v) => setState(() => categoriaSeleccionada = v),
+            ),
+            fechaCampo("Fecha Inicio", fechaInicioCtrl, seleccionarFechaInicio),
+            fechaCampo("Fecha Fin", fechaFinCtrl, seleccionarFechaFin),
             const SizedBox(height: 20),
             ElevatedButton(
               onPressed: guardar,

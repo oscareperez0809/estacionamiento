@@ -148,6 +148,11 @@ String getMarcaIcon(String nombre) {
   if (marca.contains('ducati')) {
     return 'lib/icons/marcas/ducati.png';
   }
+  //LOTUS
+  if (marca.contains('lotus')) {
+    return 'lib/icons/marcas/lotus.png';
+  }
+
   // Default / sin coincidencia
   return 'lib/icons/marcas/default.png';
 }

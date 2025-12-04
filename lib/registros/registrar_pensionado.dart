@@ -25,7 +25,6 @@ class _RegistrarPensionadoPageState extends State<RegistrarPensionadoPage> {
   DateTime? fechaInicio;
   DateTime? fechaFinal;
 
-  // Datos de Supabase
   List<dynamic> listaCategorias = [];
   List<dynamic> listaMarcas = [];
 
@@ -41,7 +40,6 @@ class _RegistrarPensionadoPageState extends State<RegistrarPensionadoPage> {
 
   Future<void> cargarCategorias() async {
     final res = await Supabase.instance.client.from("categorias").select("*");
-
     setState(() {
       listaCategorias = res;
     });
@@ -49,12 +47,12 @@ class _RegistrarPensionadoPageState extends State<RegistrarPensionadoPage> {
 
   Future<void> cargarMarcas() async {
     final res = await Supabase.instance.client.from("marcas").select("*");
-
     setState(() {
       listaMarcas = res;
     });
   }
 
+  // ------------------- SELECCIONAR FECHA DE INICIO -------------------
   Future<void> seleccionarFecha() async {
     final DateTime? seleccion = await showDatePicker(
       context: context,
@@ -75,24 +73,54 @@ class _RegistrarPensionadoPageState extends State<RegistrarPensionadoPage> {
     }
   }
 
+  // ------------------- GUARDAR PENSIONADO -------------------
   Future<void> guardarPensionado() async {
     try {
-      // Obtener el texto real según el ID seleccionado
+      // Validar teléfono único
+      final telExistente = await Supabase.instance.client
+          .from("Pensionados")
+          .select('*')
+          .eq('Teléfono', telefonoCtrl.text.trim());
+
+      if (telExistente.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("El número de teléfono ya está registrado"),
+          ),
+        );
+        return;
+      }
+
+      // Validar placas únicas
+      final placasExistentes = await Supabase.instance.client
+          .from("Pensionados")
+          .select('*')
+          .eq('Placas', placasCtrl.text.trim());
+
+      if (placasExistentes.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Las placas ya están registradas. Ingresa otras."),
+          ),
+        );
+        return;
+      }
+
+      // Obtener texto según IDs
       final categoriaTexto = listaCategorias.firstWhere(
         (c) => c['id'] == categoriaSeleccionada,
       )['categoria'];
-
       final marcaTexto = listaMarcas.firstWhere(
         (m) => m['id'] == marcaSeleccionada,
       )['marcas'];
 
-      final res = await Supabase.instance.client.from("Pensionados").insert({
-        "Nombre": nombreCtrl.text,
-        "Apellido": apellidoCtrl.text,
-        "Teléfono": telefonoCtrl.text,
-        "Marca": marcaTexto, // << Texto real
-        "Categoria": categoriaTexto, // << Texto real
-        "Placas": placasCtrl.text,
+      await Supabase.instance.client.from("Pensionados").insert({
+        "Nombre": nombreCtrl.text.trim(),
+        "Apellido": apellidoCtrl.text.trim(),
+        "Teléfono": telefonoCtrl.text.trim(),
+        "Marca": marcaTexto,
+        "Categoria": categoriaTexto,
+        "Placas": placasCtrl.text.trim(),
         "Pago_Men": double.tryParse(pagoCtrl.text) ?? 0,
         "Fecha_Inicio": fechaInicioCtrl.text,
         "Fecha_Fin": fechaFinalCtrl.text,
@@ -101,6 +129,22 @@ class _RegistrarPensionadoPageState extends State<RegistrarPensionadoPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Pensionado registrado correctamente")),
       );
+
+      // Limpiar campos
+      _formKey.currentState!.reset();
+      nombreCtrl.clear();
+      apellidoCtrl.clear();
+      telefonoCtrl.clear();
+      placasCtrl.clear();
+      pagoCtrl.clear();
+      fechaInicioCtrl.clear();
+      fechaFinalCtrl.clear();
+      setState(() {
+        categoriaSeleccionada = null;
+        marcaSeleccionada = null;
+        fechaInicio = null;
+        fechaFinal = null;
+      });
     } catch (e) {
       ScaffoldMessenger.of(
         context,
@@ -116,7 +160,7 @@ class _RegistrarPensionadoPageState extends State<RegistrarPensionadoPage> {
         backgroundColor: Colors.blueAccent,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(25),
+        padding: const EdgeInsets.all(10),
         child: Form(
           key: _formKey,
           child: Column(
@@ -135,10 +179,8 @@ class _RegistrarPensionadoPageState extends State<RegistrarPensionadoPage> {
                   Expanded(child: _input("Apellido", apellidoCtrl)),
                 ],
               ),
-
               const SizedBox(height: 20),
               _input("No. de Teléfono", telefonoCtrl),
-
               const SizedBox(height: 20),
 
               Row(
@@ -157,12 +199,10 @@ class _RegistrarPensionadoPageState extends State<RegistrarPensionadoPage> {
                 "DATOS DE MENSUALIDAD",
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
-
               const SizedBox(height: 20),
               _input("Pago de mensualidad", pagoCtrl),
 
               const SizedBox(height: 20),
-
               Row(
                 children: [
                   Expanded(
@@ -181,7 +221,6 @@ class _RegistrarPensionadoPageState extends State<RegistrarPensionadoPage> {
                   ),
                 ],
               ),
-
               const SizedBox(height: 40),
 
               SizedBox(
@@ -194,12 +233,6 @@ class _RegistrarPensionadoPageState extends State<RegistrarPensionadoPage> {
                   onPressed: () async {
                     if (_formKey.currentState!.validate()) {
                       await guardarPensionado();
-
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text("Pensionado registrado correctamente"),
-                        ),
-                      );
                     }
                   },
                   child: const Text(
@@ -215,10 +248,7 @@ class _RegistrarPensionadoPageState extends State<RegistrarPensionadoPage> {
     );
   }
 
-  // -------------------------
-  // Widgets Reutilizables
-  // -------------------------
-
+  // ------------------------- Widgets Reutilizables -------------------------
   Widget _input(String label, TextEditingController controller) {
     return TextFormField(
       controller: controller,

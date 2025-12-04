@@ -191,7 +191,7 @@ class _CarrosTabState extends State<CarrosTab> {
                               title: Text(
                                 car["placas"] ?? "Sin placas",
                                 style: const TextStyle(
-                                  fontSize: 18,
+                                  fontSize: 15,
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),

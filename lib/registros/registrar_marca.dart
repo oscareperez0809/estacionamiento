@@ -12,8 +12,15 @@ class _RegistrarMarcaPageState extends State<RegistrarMarcaPage> {
   final TextEditingController _nombreCtrl = TextEditingController();
   final supabase = Supabase.instance.client;
 
+  // Función para capitalizar la primera letra
+  String capitalizar(String texto) {
+    if (texto.isEmpty) return '';
+    texto = texto.trim();
+    return texto[0].toUpperCase() + texto.substring(1).toLowerCase();
+  }
+
   Future<void> registrarMarca() async {
-    final nombre = _nombreCtrl.text.trim(); // ← variable correcta
+    String nombre = capitalizar(_nombreCtrl.text);
 
     if (nombre.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -23,12 +30,24 @@ class _RegistrarMarcaPageState extends State<RegistrarMarcaPage> {
     }
 
     try {
-      await supabase.from('marcas').insert({
-        'marcas': nombre, // ← aquí usas 'nombre', no 'categoria'
-      });
+      // 🔍 Verificar si ya existe
+      final existing = await supabase
+          .from('marcas')
+          .select('*')
+          .ilike('marcas', nombre); // ilike para ignorar mayúsculas/minúsculas
+
+      if (existing.isNotEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("La marca '$nombre' ya está registrada")),
+        );
+        return;
+      }
+
+      // Insertar
+      await supabase.from('marcas').insert({'marcas': nombre});
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Marca registrada correctamente ✔")),
+        SnackBar(content: Text("Marca '$nombre' registrada correctamente ✔")),
       );
 
       Navigator.pop(context);
@@ -44,14 +63,14 @@ class _RegistrarMarcaPageState extends State<RegistrarMarcaPage> {
     return Scaffold(
       appBar: AppBar(title: const Text("Registrar Marca")),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(22),
         child: Column(
           children: [
             TextField(
               controller: _nombreCtrl,
               decoration: const InputDecoration(labelText: "Marca de auto"),
             ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 22),
             ElevatedButton(
               onPressed: registrarMarca,
               child: const Text("Registrar"),

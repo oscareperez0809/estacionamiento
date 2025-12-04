@@ -19,6 +19,20 @@ class _LoginPageState extends State<LoginPage> {
   bool obscure = true;
   String? errorMsg;
 
+  // ---------------------------
+  // Validación estricta contraseña
+  // ---------------------------
+  String? validarContrasenaLogin(String password) {
+    if (password.length < 8) return "La contraseña debe tener al menos 8 caracteres";
+    if (!RegExp(r'^[A-Z]').hasMatch(password)) {
+      return "La primera letra debe ser mayúscula";
+    }
+    if (!RegExp(r'^[A-Z][a-z0-9!@#\$&*~]*$').hasMatch(password)) {
+      return "El resto deben ser minúsculas, números o signos válidos";
+    }
+    return null;
+  }
+
   Future<void> login() async {
     setState(() {
       loading = true;
@@ -28,6 +42,16 @@ class _LoginPageState extends State<LoginPage> {
     try {
       final email = emailController.text.trim();
       final password = passwordController.text.trim();
+
+      // Validar contraseña antes de continuar
+      final passError = validarContrasenaLogin(password);
+      if (passError != null) {
+        setState(() {
+          errorMsg = passError;
+          loading = false;
+        });
+        return;
+      }
 
       // BUSCAR USUARIO
       final response = await supabase

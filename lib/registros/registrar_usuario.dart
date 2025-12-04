@@ -25,8 +25,32 @@ class _RegistrarUsuarioPageState extends State<RegistrarUsuarioPage> {
 
   final supabase = Supabase.instance.client;
 
+  // ---------------------------
+  // Validación estricta contraseña
+  // ---------------------------
+  String? validarContrasena(String password) {
+    if (password.length < 8)
+      return "La contraseña debe tener al menos 8 caracteres";
+    if (!RegExp(r'^[A-Z]').hasMatch(password)) {
+      return "La primera letra debe ser mayúscula";
+    }
+    if (!RegExp(r'^[A-Z][a-z0-9!@#\$&*~]*$').hasMatch(password)) {
+      return "El resto deben ser minúsculas, números o signos válidos";
+    }
+    return null;
+  }
+
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
+
+    // Validar contraseña estricta
+    final passError = validarContrasena(_passwordController.text.trim());
+    if (passError != null) {
+      setState(() {
+        _errorMessage = passError;
+      });
+      return;
+    }
 
     setState(() {
       _loading = true;
@@ -38,7 +62,7 @@ class _RegistrarUsuarioPageState extends State<RegistrarUsuarioPage> {
       final apellido = _apellidoController.text.trim();
       final email = _emailController.text.trim();
       final password = _passwordController.text.trim();
-      final fecha = _fechaController.text; // ya está formateada
+      final fecha = _fechaController.text;
 
       // Verificar si el email ya existe
       final existingUser = await supabase
@@ -89,7 +113,6 @@ class _RegistrarUsuarioPageState extends State<RegistrarUsuarioPage> {
           key: _formKey,
           child: Column(
             children: [
-
               // NOMBRE
               TextFormField(
                 controller: _nombreController,
@@ -133,8 +156,9 @@ class _RegistrarUsuarioPageState extends State<RegistrarUsuarioPage> {
                 obscureText: true,
                 validator: (v) {
                   if (v == null || v.isEmpty) return "Ingresa una contraseña";
-                  if (v.length < 6) return "Debe tener al menos 6 caracteres";
-                  return null;
+                  // Validación estricta
+                  final passError = validarContrasena(v);
+                  return passError;
                 },
               ),
 
