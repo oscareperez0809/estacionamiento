@@ -1,97 +1,138 @@
-Claro, aquí tienes una versión completa del README en **inglés**, adaptada de tu proyecto y manteniendo el estilo bonito y profesional:
-
-```markdown
-# Parking App - Flutter
-
-Welcome to the **Parking** app, a Flutter project designed to manage vehicles, users, and subscribers, with features like registration, editing, filtering, and PDF report generation.
+¡Perfecto! Te hago un **README avanzado, visual y completo**, incluyendo **toda la información que hemos trabajado juntos**: Flutter, Supabase, manejo de fechas, filtros, reportes, edición, eliminación, etc. Le agrego **badges, emojis y secciones plegables** para que se vea profesional en GitHub.
 
 ---
 
-## 📂 Project Structure
+# 🚗 Pensionados App
 
-The project is organized as follows:
+[![Flutter](https://img.shields.io/badge/Flutter-02569B?style=flat&logo=flutter&logoColor=white)](https://flutter.dev)
+[![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white)](https://supabase.com)
+[![Dart](https://img.shields.io/badge/Dart-0175C2?style=flat&logo=dart&logoColor=white)](https://dart.dev)
 
+A **Flutter application** integrated with **Supabase** to manage **long-term parking clients (pensionados)**.
+This app allows you to **register, view, edit, delete, filter, and generate reports** with real-time updates.
+
+---
+
+## ✨ Features
+
+<details>
+<summary>Click to expand 🚀</summary>
+
+- **CRUD Operations**
+
+  - Create, read, update, delete pensionados.
+
+- **Dynamic Dropdowns**
+
+  - Brands and categories loaded dynamically from Supabase.
+
+- **Real-time Search & Filters**
+
+  - Filter pensionados by phone number.
+
+- **Automatic Date Handling**
+
+  - Start date (`fechaInicio`) and end date (`fechaFin`) managed automatically.
+  - End date updates automatically when start date changes.
+  - Dates displayed in `dd-MM-yyyy` format.
+
+- **UI Indicators for Subscription Status**
+
+  - 🟢 Green: Active
+  - 🟡 Yellow: Expiring soon
+  - 🔴 Red: Expired
+
+- **Dialogs & User Interaction**
+
+  - View details, edit pensionados, confirm deletion.
+
+- **PDF Report Generation**
+
+  - Export filtered pensionados to PDF reports.
+
+- **State Management**
+
+  - `setState` and `ValueNotifier` used for reactive UI updates.
+
+</details>
+
+---
+
+## 🛠 Technologies Used
+
+- **Flutter & Dart**
+- **Supabase** (Database, Auth)
+- **intl** (Date formatting)
+- PDF generation via custom mapping
+- `ValueNotifier` for reactive state on `fechaFin`
+
+---
+
+## 💡 Key Learnings
+
+<details>
+<summary>Click to expand 📚</summary>
+
+- How to **map Supabase data** (`List<Map<String, dynamic>>`) into Dart models (`Pensionado`).
+- Correct **handling of nullable dates** and conversion to readable formats.
+- Automatic UI updates with `ValueNotifier`.
+- Implementing **dependent fields**, like updating `fechaFin` based on `fechaInicio`.
+- Building **dynamic dropdowns** from database tables (`marcas`, `categorias`).
+- Filtering lists in Flutter with `where` and `toLowerCase()` for case-insensitive search.
+- Using **dialogs** to display details and confirm actions.
+- Writing **clean and reusable widgets** (`campoTexto`, `dropdownCampo`, `fechaCampo`).
+- Generating PDF reports from **filtered data**.
+- Using **commit messages** that reflect learning progress, e.g., `"9th update: automatic fechaFin update when fechaInicio changes"`.
+
+</details>
+
+---
+
+## 🖥 UI Screenshots
+
+- **Pensionados List** – colored subscription status icons
+- **View Details Dialog** – formatted dates
+- **Edit Pensionado** – auto-update end date when start date changes
+- **PDF Report** – exported filtered list
+
+_(Add your own screenshots in this section for visual appeal)_
+
+---
+
+## 🚀 Getting Started
+
+1. **Clone the repository**
+
+```bash
+git clone <repository-url>
 ```
 
-android/           # Android files and configuration
-ios/               # iOS files and configuration
-lib/
-├─ editar/        # Edit pages
-│   ├─ editar_carro.dart
-│   ├─ editar_categoria.dart
-│   ├─ editar_marca.dart
-│   └─ editar_pensionado.dart
-├─ icons/         # Icons used in the app
-│   ├─ car.png
-│   ├─ categoria.png
-│   ├─ marca.png
-│   ├─ pensionados.png
-│   └─ usuario.png
-├─ images/        # Images used in the app
-└─ registros/     # Registration pages
-├─ registrar_carro.dart
-├─ registrar_categoria.dart
-├─ registrar_marca.dart
-├─ registrar_pensionado.dart
-└─ registrar_usuario.dart
+2. **Install dependencies**
 
+```bash
+flutter pub get
+```
+
+3. **Run the app**
+
+```bash
+flutter run
 ```
 
 ---
 
-## 📝 Main Features
+## 📝 Notes & Tips
 
-1. **Data Registration**
-   - Register **users**, **vehicles**, **brands**, **categories**, and **subscribers**.
-   - Validated and standardized date formats.
+- Ensure your Supabase tables exist with correct column names:
 
-2. **Editing Records**
-   - Modify existing information.
-   - Automatic adjustment of end date when the start date changes for subscribers.
+  - `Pensionados` → `id`, `Nombre`, `Apellido`, `Teléfono`, `Marca`, `Categoria`, `Placas`, `Pago_Men`, `Fecha_Inicio`, `Fecha_Fin`
+  - `marcas` → `marcas`
+  - `categorias` → `categoria`
 
-3. **Filtering and Search**
-   - Search records by **phone number**.
-   - Dynamic filtering for subscribers, vehicles, and users.
-
-4. **Visual Indicators**
-   - Icons showing subscription status based on the end date.
-   - Colors: red (expired), yellow (expiring soon), green (active).
-
-5. **Reports**
-   - Generate **PDF reports** for subscribers and other records.
-
-6. **Supabase Integration**
-   - Full CRUD operations on Supabase tables.
-   - Conversion between `Map<String, dynamic>` and Dart objects.
+- Dates should be stored in `yyyy-MM-dd` format to avoid timestamps like `T00:00:00.000`.
+- `ValueNotifier` is essential for automatically updating **end date** indicators in the UI.
+- Use **clear commit messages** to track your learning progress.
 
 ---
 
-## 📅 Dates and Formats
-
-- Dates are displayed in **dd-MM-yyyy** format for clarity.
-- **End date** automatically adjusts if the **start date** changes.
-
----
-
-## 💡 What We Learned
-
-- Using **ValueNotifier** to dynamically update the UI.
-- Mapping and converting Supabase data to Dart objects.
-- Using **TextEditingController**, **DropdownButtonFormField**, and **DatePicker**.
-- Dynamic list filtering and search functionality.
-- Creating **PDF reports** from Flutter.
-- Organizing folders and modularizing code for maintainability.
-
----
-
-## 🚀 Next Steps
-
-- Add user authentication.
-- Implement more custom reports.
-- Enhance user experience with advanced validations.
-
----
-
-## 🖤 Thanks for checking out this project
-```
 
