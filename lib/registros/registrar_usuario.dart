@@ -19,18 +19,18 @@ class _RegistrarUsuarioPageState extends State<RegistrarUsuarioPage> {
   final _fechaController = TextEditingController();
 
   DateTime? _fechaSeleccionada;
-
   bool _loading = false;
   String? _errorMessage;
 
+  bool _mostrarPassword = false; // 👁️ Estado del ojo
+
   final supabase = Supabase.instance.client;
 
-  // ---------------------------
-  // Validación estricta contraseña
-  // ---------------------------
+  // Validación de contraseña
   String? validarContrasena(String password) {
-    if (password.length < 8)
+    if (password.length < 8) {
       return "La contraseña debe tener al menos 8 caracteres";
+    }
     if (!RegExp(r'^[A-Z]').hasMatch(password)) {
       return "La primera letra debe ser mayúscula";
     }
@@ -43,12 +43,9 @@ class _RegistrarUsuarioPageState extends State<RegistrarUsuarioPage> {
   Future<void> _register() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Validar contraseña estricta
     final passError = validarContrasena(_passwordController.text.trim());
     if (passError != null) {
-      setState(() {
-        _errorMessage = passError;
-      });
+      setState(() => _errorMessage = passError);
       return;
     }
 
@@ -64,7 +61,6 @@ class _RegistrarUsuarioPageState extends State<RegistrarUsuarioPage> {
       final password = _passwordController.text.trim();
       final fecha = _fechaController.text;
 
-      // Verificar si el email ya existe
       final existingUser = await supabase
           .from('Usuarios')
           .select()
@@ -75,10 +71,8 @@ class _RegistrarUsuarioPageState extends State<RegistrarUsuarioPage> {
         throw Exception("Este correo ya está registrado");
       }
 
-      // Crear hash BCrypt
       final hashedPassword = BCrypt.hashpw(password, BCrypt.gensalt());
 
-      // Insertar en Supabase
       await supabase.from('Usuarios').insert({
         'Nombre': nombre,
         'Apellido': apellido,
@@ -93,7 +87,7 @@ class _RegistrarUsuarioPageState extends State<RegistrarUsuarioPage> {
         const SnackBar(content: Text("Usuario registrado correctamente")),
       );
 
-      Navigator.pop(context); // regresar
+      Navigator.pop(context);
     } catch (e) {
       setState(() {
         _errorMessage = e.toString().replaceAll("Exception: ", "");
@@ -113,7 +107,6 @@ class _RegistrarUsuarioPageState extends State<RegistrarUsuarioPage> {
           key: _formKey,
           child: Column(
             children: [
-              // NOMBRE
               TextFormField(
                 controller: _nombreController,
                 decoration: const InputDecoration(labelText: "Nombre"),
@@ -123,7 +116,6 @@ class _RegistrarUsuarioPageState extends State<RegistrarUsuarioPage> {
 
               const SizedBox(height: 15),
 
-              // APELLIDO
               TextFormField(
                 controller: _apellidoController,
                 decoration: const InputDecoration(labelText: "Apellido"),
@@ -133,7 +125,6 @@ class _RegistrarUsuarioPageState extends State<RegistrarUsuarioPage> {
 
               const SizedBox(height: 15),
 
-              // EMAIL
               TextFormField(
                 controller: _emailController,
                 decoration: const InputDecoration(labelText: "Correo"),
@@ -149,22 +140,31 @@ class _RegistrarUsuarioPageState extends State<RegistrarUsuarioPage> {
 
               const SizedBox(height: 15),
 
-              // CONTRASEÑA
+              // 🔥 CONTRASEÑA CON OJO
               TextFormField(
                 controller: _passwordController,
-                decoration: const InputDecoration(labelText: "Contraseña"),
-                obscureText: true,
+                obscureText: !_mostrarPassword,
+                decoration: InputDecoration(
+                  labelText: "Contraseña",
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _mostrarPassword
+                          ? Icons.visibility
+                          : Icons.visibility_off,
+                    ),
+                    onPressed: () {
+                      setState(() => _mostrarPassword = !_mostrarPassword);
+                    },
+                  ),
+                ),
                 validator: (v) {
                   if (v == null || v.isEmpty) return "Ingresa una contraseña";
-                  // Validación estricta
-                  final passError = validarContrasena(v);
-                  return passError;
+                  return validarContrasena(v);
                 },
               ),
 
               const SizedBox(height: 15),
 
-              // FECHA DE NACIMIENTO CON DATE PICKER
               TextFormField(
                 controller: _fechaController,
                 readOnly: true,
@@ -181,14 +181,11 @@ class _RegistrarUsuarioPageState extends State<RegistrarUsuarioPage> {
                 onTap: () async {
                   FocusScope.of(context).unfocus();
 
-                  final DateTime? picked = await showDatePicker(
+                  final picked = await showDatePicker(
                     context: context,
                     initialDate: DateTime(2000),
                     firstDate: DateTime(1900),
                     lastDate: DateTime.now(),
-                    helpText: "Seleccionar fecha",
-                    cancelText: "Cancelar",
-                    confirmText: "OK",
                   );
 
                   if (picked != null) {
